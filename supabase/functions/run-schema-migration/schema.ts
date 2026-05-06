@@ -8731,110 +8731,35 @@ AS $function$
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.gin_extract_query_trgm(text, internal, smallint, internal, internal, internal, internal)
- RETURNS internal
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gin_extract_query_trgm$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gin_extract_value_trgm(text, internal)
- RETURNS internal
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gin_extract_value_trgm$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gin_trgm_consistent(internal, smallint, text, integer, internal, internal, internal, internal)
- RETURNS boolean
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gin_trgm_consistent$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gin_trgm_triconsistent(internal, smallint, text, integer, internal, internal, internal)
- RETURNS "char"
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gin_trgm_triconsistent$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_compress(internal)
- RETURNS internal
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_compress$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_consistent(internal, text, smallint, oid, internal)
- RETURNS boolean
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_consistent$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_decompress(internal)
- RETURNS internal
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_decompress$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_distance(internal, text, smallint, oid, internal)
- RETURNS double precision
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_distance$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_in(cstring)
- RETURNS gtrgm
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_in$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_options(internal)
- RETURNS void
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE
-AS '$libdir/pg_trgm', $function$gtrgm_options$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_out(gtrgm)
- RETURNS cstring
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_out$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_penalty(internal, internal, internal)
- RETURNS internal
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_penalty$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_picksplit(internal, internal)
- RETURNS internal
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_picksplit$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_same(gtrgm, gtrgm, internal)
- RETURNS internal
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_same$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.gtrgm_union(internal, internal)
- RETURNS gtrgm
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$gtrgm_union$function$
-;
+-- (skipped C-language extension function)
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
  RETURNS trigger
@@ -10472,12 +10397,7 @@ END;
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.set_limit(real)
- RETURNS real
- LANGUAGE c
- STRICT
-AS '$libdir/pg_trgm', $function$set_limit$function$
-;
+-- (skipped C-language extension function)
 
 CREATE OR REPLACE FUNCTION public.set_order_date()
  RETURNS trigger
@@ -10526,75 +10446,25 @@ END;
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.show_limit()
- RETURNS real
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$show_limit$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.show_trgm(text)
- RETURNS text[]
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$show_trgm$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.similarity(text, text)
- RETURNS real
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$similarity$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.similarity_dist(text, text)
- RETURNS real
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$similarity_dist$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.similarity_op(text, text)
- RETURNS boolean
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$similarity_op$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.strict_word_similarity(text, text)
- RETURNS real
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$strict_word_similarity$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.strict_word_similarity_commutator_op(text, text)
- RETURNS boolean
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$strict_word_similarity_commutator_op$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.strict_word_similarity_dist_commutator_op(text, text)
- RETURNS real
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$strict_word_similarity_dist_commutator_op$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.strict_word_similarity_dist_op(text, text)
- RETURNS real
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$strict_word_similarity_dist_op$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.strict_word_similarity_op(text, text)
- RETURNS boolean
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$strict_word_similarity_op$function$
-;
+-- (skipped C-language extension function)
 
 CREATE OR REPLACE FUNCTION public.sync_inventory_batch_available_qty()
  RETURNS trigger
@@ -12533,40 +12403,15 @@ END;
 $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.word_similarity(text, text)
- RETURNS real
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$word_similarity$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.word_similarity_commutator_op(text, text)
- RETURNS boolean
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$word_similarity_commutator_op$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.word_similarity_dist_commutator_op(text, text)
- RETURNS real
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$word_similarity_dist_commutator_op$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.word_similarity_dist_op(text, text)
- RETURNS real
- LANGUAGE c
- IMMUTABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$word_similarity_dist_op$function$
-;
+-- (skipped C-language extension function)
 
-CREATE OR REPLACE FUNCTION public.word_similarity_op(text, text)
- RETURNS boolean
- LANGUAGE c
- STABLE PARALLEL SAFE STRICT
-AS '$libdir/pg_trgm', $function$word_similarity_op$function$
-;
+-- (skipped C-language extension function)
 
 -- ============================================================
 -- CONSTRAINTS (PK, FK, UNIQUE, CHECK)
