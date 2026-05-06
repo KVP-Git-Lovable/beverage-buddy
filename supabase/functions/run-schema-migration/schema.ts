@@ -2868,10 +2868,6 @@ CREATE TABLE public.orders (
   event_id uuid
 );
 
-CREATE TABLE public.orders_total_amount (
-  total_amount numeric(10,2)
-);
-
 CREATE TABLE public.packing_list_assignments (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   packing_list_id uuid NOT NULL,
