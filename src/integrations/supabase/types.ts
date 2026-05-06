@@ -5209,6 +5209,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          is_active: boolean
           legacy_mapping: string | null
           level: number
           name: string
@@ -5222,6 +5223,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean
           legacy_mapping?: string | null
           level?: number
           name: string
@@ -5235,6 +5237,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_active?: boolean
           legacy_mapping?: string | null
           level?: number
           name?: string
@@ -13177,6 +13180,7 @@ export type Database = {
         Row: {
           barcode: string | null
           barcode_image_url: string | null
+          base_unit: string | null
           base_unit_category: string | null
           brand: string | null
           category_id: string | null
@@ -13213,6 +13217,7 @@ export type Database = {
         Insert: {
           barcode?: string | null
           barcode_image_url?: string | null
+          base_unit?: string | null
           base_unit_category?: string | null
           brand?: string | null
           category_id?: string | null
@@ -13249,6 +13254,7 @@ export type Database = {
         Update: {
           barcode?: string | null
           barcode_image_url?: string | null
+          base_unit?: string | null
           base_unit_category?: string | null
           brand?: string | null
           category_id?: string | null
@@ -15341,30 +15347,36 @@ export type Database = {
       scheme_applicability: {
         Row: {
           applicability_level: string
+          applicability_type: string | null
           created_at: string | null
           entity_id: string | null
           entity_name: string | null
           id: string
           include_children: boolean | null
           scheme_id: string
+          updated_at: string
         }
         Insert: {
           applicability_level: string
+          applicability_type?: string | null
           created_at?: string | null
           entity_id?: string | null
           entity_name?: string | null
           id?: string
           include_children?: boolean | null
           scheme_id: string
+          updated_at?: string
         }
         Update: {
           applicability_level?: string
+          applicability_type?: string | null
           created_at?: string | null
           entity_id?: string | null
           entity_name?: string | null
           id?: string
           include_children?: boolean | null
           scheme_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -15381,6 +15393,7 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean | null
+          policy_key: string | null
           policy_name: string
           policy_value: Json
           updated_at: string | null
@@ -15390,6 +15403,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          policy_key?: string | null
           policy_name: string
           policy_value: Json
           updated_at?: string | null
@@ -15399,6 +15413,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean | null
+          policy_key?: string | null
           policy_name?: string
           policy_value?: Json
           updated_at?: string | null
@@ -15668,6 +15683,7 @@ export type Database = {
           product_id: string
           product_name: string
           retailer_id: string
+          stock_date: string
           stock_quantity: number
           updated_at: string
           user_id: string
@@ -15679,6 +15695,7 @@ export type Database = {
           product_id: string
           product_name: string
           retailer_id: string
+          stock_date?: string
           stock_quantity?: number
           updated_at?: string
           user_id: string
@@ -15690,6 +15707,7 @@ export type Database = {
           product_id?: string
           product_name?: string
           retailer_id?: string
+          stock_date?: string
           stock_quantity?: number
           updated_at?: string
           user_id?: string
@@ -18382,7 +18400,7 @@ export type Database = {
           return_grn_number: string
           updated_at: string
           user_id: string
-          van_id: string
+          van_id: string | null
           verified_at: string | null
           verified_by: string | null
           verified_by_name: string | null
@@ -18398,7 +18416,7 @@ export type Database = {
           return_grn_number: string
           updated_at?: string
           user_id: string
-          van_id: string
+          van_id?: string | null
           verified_at?: string | null
           verified_by?: string | null
           verified_by_name?: string | null
@@ -18414,7 +18432,7 @@ export type Database = {
           return_grn_number?: string
           updated_at?: string
           user_id?: string
-          van_id?: string
+          van_id?: string | null
           verified_at?: string | null
           verified_by?: string | null
           verified_by_name?: string | null
