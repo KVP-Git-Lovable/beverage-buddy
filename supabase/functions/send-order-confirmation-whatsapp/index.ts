@@ -90,14 +90,12 @@ serve(async (req) => {
     const shortId = orderId.substring(0, 8);
     const message = `🛒 *Order Confirmation*\n\nHi *${retailer.name}*,\n\nYour order *#${shortId}* has been placed successfully!\n\n📦 *Order Items:*\n${itemLines}\n\n💰 *Total: ₹${Number(totalAmount).toFixed(2)}*\n\nThank you for your order! 🙏`;
 
-    // Send via Twilio — use project-configured credentials so SID/Token match
-    const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
+    // Send via Twilio — pair the SID hardcoded in send-invoice-whatsapp with the env auth token (known-good combo)
+    const accountSid = 'AC2bed17b2742df7031ebc7de2d726b62f';
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-    if (!accountSid) throw new Error('TWILIO_ACCOUNT_SID not configured');
     if (!authToken) throw new Error('TWILIO_AUTH_TOKEN not configured');
 
-    const rawFrom = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || Deno.env.get('TWILIO_FROM_NUMBER') || '+917411681616';
-    const fromNumber = rawFrom.startsWith('+') ? rawFrom : `+${rawFrom.replace(/\D/g, '')}`;
+    const fromNumber = '+917411681616';
     const toNumber = retailer.phone.startsWith('+') ? retailer.phone : `+91${retailer.phone.replace(/\D/g, '')}`;
 
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
