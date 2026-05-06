@@ -6244,8 +6244,6 @@ ALTER TABLE public.product_uom_mapping ADD CONSTRAINT product_uom_mapping_pkey P
 ALTER TABLE public.product_uom_mapping ADD CONSTRAINT product_uom_mapping_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE;
 ALTER TABLE public.product_uom_mapping ADD CONSTRAINT product_uom_mapping_product_id_uom_id_key UNIQUE (product_id, uom_id);
 ALTER TABLE public.product_uom_mapping ADD CONSTRAINT product_uom_mapping_uom_id_fkey FOREIGN KEY (uom_id) REFERENCES uom_master(id) ON DELETE RESTRICT;
-ALTER TABLE public.product_uom_mapping ADD CONSTRAINT trg_pum_single_base TRIGGER DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE public.product_uom_mapping ADD CONSTRAINT trg_validate_product_uom_mapping_state TRIGGER DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE public.product_variants ADD CONSTRAINT product_variants_focused_type_check CHECK ((focused_type = ANY (ARRAY['fixed_date'::text, 'recurring'::text, 'keep_open'::text])));
 ALTER TABLE public.product_variants ADD CONSTRAINT product_variants_pkey PRIMARY KEY (id);
 ALTER TABLE public.product_variants ADD CONSTRAINT product_variants_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE;
