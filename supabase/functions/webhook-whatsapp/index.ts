@@ -1295,13 +1295,13 @@ async function sendTwilioTemplate(to: string): Promise<void> {
 
 // ── Twilio free-form WhatsApp send (Body), with 24h-window template fallback ──
 async function sendTwilioFreeForm(to: string, body: string): Promise<void> {
-  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID') || 'AC2bed17b2742df7031ebc7de2d726b62f';
+  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
   const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  if (!authToken) {
-    console.error('TWILIO_AUTH_TOKEN not configured, cannot send free-form message');
+  if (!accountSid || !authToken) {
+    console.error('TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not configured, cannot send free-form message');
     return;
   }
-  const fromNumber = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+917411681616';
+  const fromNumber = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+917411678484';
   const fromFormatted = fromNumber.startsWith('whatsapp:') ? fromNumber : `whatsapp:${fromNumber}`;
   const toFormatted = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
 
