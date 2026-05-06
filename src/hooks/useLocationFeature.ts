@@ -28,8 +28,9 @@ export const useLocationFeature = () => {
 
   // Subscribe to changes in feature flags
   useEffect(() => {
+    const channelName = `location-feature-changes-${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel('location-feature-changes')
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
