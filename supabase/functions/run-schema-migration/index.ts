@@ -1,5 +1,5 @@
-// One-shot schema migration runner. Reads schema.sql sibling and runs it via SUPABASE_DB_URL.
 import postgres from "https://deno.land/x/postgresjs@v3.4.4/mod.js";
+import { SCHEMA_SQL } from "./schema.ts";
 
 Deno.serve(async (req) => {
   const cors = {
@@ -13,19 +13,14 @@ Deno.serve(async (req) => {
     const dbUrl = Deno.env.get("SUPABASE_DB_URL");
     if (!dbUrl) throw new Error("SUPABASE_DB_URL not set");
 
-    const sqlPath = new URL("./schema.sql", import.meta.url);
-    const schemaText = await Deno.readTextFile(sqlPath);
-
     const sql = postgres(dbUrl, { max: 1, prepare: false, idle_timeout: 5 });
-
-    // Run as a single unprepared simple query — psql-style multi-statement.
-    await sql.unsafe(schemaText);
-
+    await sql.unsafe(SCHEMA_SQL);
     await sql.end({ timeout: 5 });
-    return new Response(JSON.stringify({ ok: true, bytes: schemaText.length }), {
+
+    return new Response(JSON.stringify({ ok: true, bytes: SCHEMA_SQL.length }), {
       headers: { ...cors, "Content-Type": "application/json" },
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error("Migration failed:", e);
     return new Response(
       JSON.stringify({ ok: false, error: String(e?.message ?? e), stack: e?.stack }),
