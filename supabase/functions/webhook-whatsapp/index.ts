@@ -1295,7 +1295,7 @@ async function sendTwilioTemplate(to: string): Promise<void> {
   const formBody = new URLSearchParams({
     To: to,
     From: fromFormatted,
-    ContentSid: 'HXae62614f9e4e3b47ede7db13d75175eb',
+    ContentSid: Deno.env.get('TWILIO_GREETING_TEMPLATE_SID') || 'HX7e50b0a528f6bf10a6202eb926465a30',
     ContentVariables: JSON.stringify({}),
   });
 
