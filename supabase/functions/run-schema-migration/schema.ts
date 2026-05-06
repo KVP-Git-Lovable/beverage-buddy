@@ -1,4 +1,4 @@
--- =====================================================================
+export const SCHEMA_SQL = `-- =====================================================================
 -- Supabase project: aoxdosjkwqyuvccuwhzc  (schema-only dump, reconstructed)
 -- Generated 2026-05-05 from pg_catalog. Equivalent to pg_dump --schema-only
 -- for the public schema. Excludes Supabase-managed schemas (auth, storage,
@@ -9182,7 +9182,7 @@ AS $function$
 DECLARE
   seq_val integer;
 BEGIN
-  SELECT COALESCE(MAX(CAST(SUBSTRING(grn_number FROM 'GRN-\d{4}-(\d+)') AS integer)), 0) + 1
+  SELECT COALESCE(MAX(CAST(SUBSTRING(grn_number FROM 'GRN-\\d{4}-(\\d+)') AS integer)), 0) + 1
   INTO seq_val FROM public.goods_receipt_notes;
   RETURN 'GRN-' || TO_CHAR(NOW(), 'YYMM') || '-' || LPAD(seq_val::text, 5, '0');
 END;
@@ -9277,7 +9277,7 @@ AS $function$
 DECLARE
   seq_val integer;
 BEGIN
-  SELECT COALESCE(MAX(CAST(SUBSTRING(invoice_number FROM 'PINV-\d{4}-(\d+)') AS integer)), 0) + 1
+  SELECT COALESCE(MAX(CAST(SUBSTRING(invoice_number FROM 'PINV-\\d{4}-(\\d+)') AS integer)), 0) + 1
   INTO seq_val FROM public.primary_invoices;
   RETURN 'PINV-' || TO_CHAR(NOW(), 'YYMM') || '-' || LPAD(seq_val::text, 5, '0');
 END;
@@ -9305,7 +9305,7 @@ AS $function$
 DECLARE
   seq_val integer;
 BEGIN
-  SELECT COALESCE(MAX(CAST(SUBSTRING(return_number FROM 'RET-\d{4}-(\d+)') AS integer)), 0) + 1
+  SELECT COALESCE(MAX(CAST(SUBSTRING(return_number FROM 'RET-\\d{4}-(\\d+)') AS integer)), 0) + 1
   INTO seq_val FROM public.primary_return_notes;
   RETURN 'RET-' || TO_CHAR(NOW(), 'YYMM') || '-' || LPAD(seq_val::text, 5, '0');
 END;
@@ -9319,7 +9319,7 @@ AS $function$
 DECLARE
   seq_val integer;
 BEGIN
-  SELECT COALESCE(MAX(CAST(SUBSTRING(shipment_number FROM 'SHP-\d{4}-(\d+)') AS integer)), 0) + 1
+  SELECT COALESCE(MAX(CAST(SUBSTRING(shipment_number FROM 'SHP-\\d{4}-(\\d+)') AS integer)), 0) + 1
   INTO seq_val FROM public.primary_shipments;
   RETURN 'SHP-' || TO_CHAR(NOW(), 'YYMM') || '-' || LPAD(seq_val::text, 5, '0');
 END;
@@ -10056,13 +10056,13 @@ AS $function$
   ) p
   LEFT JOIN (
     SELECT 
-      regexp_replace(UPPER(TRIM(state)), '\s*&\s*', ' AND ', 'g') AS state_norm,
+      regexp_replace(UPPER(TRIM(state)), '\\s*&\\s*', ' AND ', 'g') AS state_norm,
       COUNT(*) AS total,
       COUNT(*) FILTER (WHERE is_converted = true) AS converted
     FROM retailer_external_db
     WHERE state IS NOT NULL AND TRIM(state) != ''
-    GROUP BY regexp_replace(UPPER(TRIM(state)), '\s*&\s*', ' AND ', 'g')
-  ) r ON regexp_replace(UPPER(TRIM(p.statename)), '\s*&\s*', ' AND ', 'g') = r.state_norm
+    GROUP BY regexp_replace(UPPER(TRIM(state)), '\\s*&\\s*', ' AND ', 'g')
+  ) r ON regexp_replace(UPPER(TRIM(p.statename)), '\\s*&\\s*', ' AND ', 'g') = r.state_norm
   GROUP BY p.statename, r.total, r.converted
   ORDER BY p.statename;
 $function$
@@ -12389,7 +12389,7 @@ DECLARE
   v_old_d10 text;
 BEGIN
   IF (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') AND OLD.phone IS NOT NULL THEN
-    v_old_digits := regexp_replace(OLD.phone, '\D', '', 'g');
+    v_old_digits := regexp_replace(OLD.phone, '\\D', '', 'g');
     IF length(v_old_digits) >= 10 THEN
       v_old_d10 := CASE WHEN length(v_old_digits) = 12 AND substring(v_old_digits, 1, 2) = '91'
                         THEN substring(v_old_digits, 3)
@@ -12403,7 +12403,7 @@ BEGIN
   IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE')
      AND NEW.phone IS NOT NULL
      AND NEW.name IS NOT NULL THEN
-    v_digits := regexp_replace(NEW.phone, '\D', '', 'g');
+    v_digits := regexp_replace(NEW.phone, '\\D', '', 'g');
     IF length(v_digits) >= 10 THEN
       v_d10 := CASE WHEN length(v_digits) = 12 AND substring(v_digits, 1, 2) = '91'
                     THEN substring(v_digits, 3)
@@ -16085,3 +16085,4 @@ CREATE POLICY "Anyone authenticated can read workflow_steps" ON public.workflow_
 CREATE POLICY "Admins can manage working days config" ON public.working_days_config AS PERMISSIVE FOR ALL TO public USING (is_admin_or_manager());
 CREATE POLICY "Anyone can read working days config" ON public.working_days_config AS PERMISSIVE FOR SELECT TO public USING (true);
 
+`;
