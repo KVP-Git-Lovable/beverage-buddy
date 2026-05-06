@@ -256,6 +256,9 @@ export const OrderEntry = () => {
     };
     
     fetchUserId();
+    // Prefetch UOM mappings for ALL products in one RPC so the per-line
+    // Unit dropdown is populated instantly when a product is selected.
+    void prefetchAllProductUnits();
   }, []);
 
   // Reset auto-expand flag whenever category changes
