@@ -1,3 +1,6 @@
 project_id = "qdopojhwikdikhppqtgx"
 [functions.run-schema-migration]
 verify_jwt = false
+
+[functions.send-order-confirmation-whatsapp]
+verify_jwt = false
