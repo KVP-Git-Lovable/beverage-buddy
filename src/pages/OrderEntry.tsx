@@ -2373,7 +2373,7 @@ export const OrderEntry = () => {
               <p className="text-sm text-muted-foreground mt-2">
                 {selectedCategory === "All" ? "No products available" : `No products in ${selectedCategory} category`}
               </p>
-            </div> : filteredProducts.map(product => {
+            </div> : paginatedProducts.map(product => {
               const displayProduct = getDisplayProduct(product);
               const savingsAmount = getSavingsAmount(product);
               return <Card key={product.id} className="relative">
