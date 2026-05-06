@@ -1278,42 +1278,47 @@ function sendEmptyTwiml(): Response {
   });
 }
 
-async function sendTwilioTemplate(to: string): Promise<void> {
-  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-  const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  if (!accountSid || !authToken) {
-    console.error('TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not configured, skipping template send');
-    return;
+// ── Twilio sends (via Lovable connector gateway) ────────────────────
+const TWILIO_GATEWAY_URL = 'https://connector-gateway.lovable.dev/twilio';
+
+async function twilioGatewayPost(formBody: URLSearchParams): Promise<{ ok: boolean; status: number; result: any }> {
+  const lovableKey = Deno.env.get('LOVABLE_API_KEY');
+  const twilioKey = Deno.env.get('TWILIO_API_KEY');
+  if (!lovableKey || !twilioKey) {
+    console.error('LOVABLE_API_KEY or TWILIO_API_KEY not configured, cannot call Twilio gateway');
+    return { ok: false, status: 0, result: { error: 'missing_credentials' } };
   }
+  const response = await fetch(`${TWILIO_GATEWAY_URL}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${lovableKey}`,
+      'X-Connection-Api-Key': twilioKey,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: formBody,
+  });
+  const result = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, result };
+}
 
-  const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-  const base64Auth = btoa(`${accountSid}:${authToken}`);
-
+async function sendTwilioTemplate(to: string): Promise<void> {
   const fromEnv = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+917411678484';
   const fromFormatted = fromEnv.startsWith('whatsapp:') ? fromEnv : `whatsapp:${fromEnv}`;
+  const toFormatted = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
 
   const formBody = new URLSearchParams({
-    To: to,
+    To: toFormatted,
     From: fromFormatted,
     ContentSid: Deno.env.get('TWILIO_GREETING_TEMPLATE_SID') || 'HX7e50b0a528f6bf10a6202eb926465a30',
     ContentVariables: JSON.stringify({}),
   });
 
   try {
-    const response = await fetch(twilioUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${base64Auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formBody,
-    });
-
-    const result = await response.json();
-    if (!response.ok) {
-      console.error('❌ Twilio template send error:', result);
+    const { ok, status, result } = await twilioGatewayPost(formBody);
+    if (!ok) {
+      console.error(`❌ Twilio template send error [${status}]:`, result);
     } else {
-      console.log(`✅ Template sent to ${to}: SID ${result.sid}`);
+      console.log(`✅ Template sent to ${toFormatted}: SID ${result.sid}`);
     }
   } catch (err) {
     console.error('❌ Twilio template send exception:', err);
@@ -1322,37 +1327,19 @@ async function sendTwilioTemplate(to: string): Promise<void> {
 
 // ── Twilio free-form WhatsApp send (Body), with 24h-window template fallback ──
 async function sendTwilioFreeForm(to: string, body: string): Promise<void> {
-  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-  const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  if (!accountSid || !authToken) {
-    console.error('TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not configured, cannot send free-form message');
-    return;
-  }
   const fromNumber = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+917411678484';
   const fromFormatted = fromNumber.startsWith('whatsapp:') ? fromNumber : `whatsapp:${fromNumber}`;
   const toFormatted = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
 
-  const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-  const base64Auth = btoa(`${accountSid}:${authToken}`);
-
   try {
     const tSend = performance.now();
-    const response = await fetch(twilioUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${base64Auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        To: toFormatted,
-        From: fromFormatted,
-        Body: body.slice(0, 1600),
-      }),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      console.error(`❌ Twilio free-form send error to ${toFormatted}:`, result);
-      // Fall back to greeting template if outside the 24h window
+    const { ok, status, result } = await twilioGatewayPost(new URLSearchParams({
+      To: toFormatted,
+      From: fromFormatted,
+      Body: body.slice(0, 1600),
+    }));
+    if (!ok) {
+      console.error(`❌ Twilio free-form send error to ${toFormatted} [${status}]:`, result);
       if (result?.code === 63016) {
         console.log('Outside 24-hour window, falling back to greeting template');
         await sendTwilioTemplate(toFormatted);
