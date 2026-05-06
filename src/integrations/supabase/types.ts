@@ -20,10 +20,52 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      approval_status: "pending" | "approved" | "rejected"
+      branding_status:
+        | "submitted"
+        | "manager_approved"
+        | "manager_rejected"
+        | "assigned"
+        | "in_progress"
+        | "executed"
+        | "verified"
+      employee_doc_type: "address_proof" | "id_proof" | "other"
+      pm_member_role:
+        | "owner"
+        | "manager"
+        | "developer"
+        | "designer"
+        | "tester"
+        | "viewer"
+      pm_priority: "critical" | "high" | "medium" | "low"
+      pm_project_status:
+        | "planning"
+        | "active"
+        | "on_hold"
+        | "completed"
+        | "cancelled"
+      pm_sprint_status: "planning" | "active" | "completed" | "cancelled"
+      pm_task_status:
+        | "backlog"
+        | "todo"
+        | "in_progress"
+        | "in_review"
+        | "done"
+        | "cancelled"
+        | "overdue"
+      pm_task_type: "epic" | "story" | "task" | "bug" | "idea" | "milestone"
+      user_status:
+        | "pending_completion"
+        | "pending_approval"
+        | "approved"
+        | "rejected"
+        | "active"
+        | "inactive"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +192,54 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      approval_status: ["pending", "approved", "rejected"],
+      branding_status: [
+        "submitted",
+        "manager_approved",
+        "manager_rejected",
+        "assigned",
+        "in_progress",
+        "executed",
+        "verified",
+      ],
+      employee_doc_type: ["address_proof", "id_proof", "other"],
+      pm_member_role: [
+        "owner",
+        "manager",
+        "developer",
+        "designer",
+        "tester",
+        "viewer",
+      ],
+      pm_priority: ["critical", "high", "medium", "low"],
+      pm_project_status: [
+        "planning",
+        "active",
+        "on_hold",
+        "completed",
+        "cancelled",
+      ],
+      pm_sprint_status: ["planning", "active", "completed", "cancelled"],
+      pm_task_status: [
+        "backlog",
+        "todo",
+        "in_progress",
+        "in_review",
+        "done",
+        "cancelled",
+        "overdue",
+      ],
+      pm_task_type: ["epic", "story", "task", "bug", "idea", "milestone"],
+      user_status: [
+        "pending_completion",
+        "pending_approval",
+        "approved",
+        "rejected",
+        "active",
+        "inactive",
+      ],
+    },
   },
 } as const
