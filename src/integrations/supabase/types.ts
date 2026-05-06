@@ -1391,6 +1391,1482 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_badges: {
+        Row: {
+          badge_color: string | null
+          created_at: string
+          criteria_competency_id: string | null
+          criteria_type: string
+          criteria_value: number
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          points_awarded: number | null
+        }
+        Insert: {
+          badge_color?: string | null
+          created_at?: string
+          criteria_competency_id?: string | null
+          criteria_type: string
+          criteria_value: number
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          points_awarded?: number | null
+        }
+        Update: {
+          badge_color?: string | null
+          created_at?: string
+          criteria_competency_id?: string | null
+          criteria_type?: string
+          criteria_value?: number
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          points_awarded?: number | null
+        }
+        Relationships: []
+      }
+      coach_chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          message_type: string | null
+          metadata: Json | null
+          role: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          message_type?: string | null
+          metadata?: Json | null
+          role: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          message_type?: string | null
+          metadata?: Json | null
+          role?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_competencies: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coach_daily_nudges: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          id: string
+          is_delivered: boolean | null
+          is_interacted: boolean | null
+          message: string | null
+          nudge_type: string
+          reference_id: string | null
+          scheduled_for: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          is_delivered?: boolean | null
+          is_interacted?: boolean | null
+          message?: string | null
+          nudge_type: string
+          reference_id?: string | null
+          scheduled_for?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          is_delivered?: boolean | null
+          is_interacted?: boolean | null
+          message?: string | null
+          nudge_type?: string
+          reference_id?: string | null
+          scheduled_for?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_feedback: {
+        Row: {
+          created_at: string
+          feedback_text: string | null
+          id: string
+          is_helpful: boolean | null
+          rating: number | null
+          reference_id: string | null
+          reference_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          is_helpful?: boolean | null
+          rating?: number | null
+          reference_id?: string | null
+          reference_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          is_helpful?: boolean | null
+          rating?: number | null
+          reference_id?: string | null
+          reference_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_learning_content: {
+        Row: {
+          competency_id: string | null
+          content_body: string | null
+          content_type: string
+          content_url: string | null
+          created_at: string
+          description: string | null
+          difficulty_level: string | null
+          duration_minutes: number | null
+          id: string
+          is_active: boolean | null
+          points_on_completion: number | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          competency_id?: string | null
+          content_body?: string | null
+          content_type: string
+          content_url?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          points_on_completion?: number | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          competency_id?: string | null
+          content_body?: string | null
+          content_type?: string
+          content_url?: string | null
+          created_at?: string
+          description?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          points_on_completion?: number | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coach_quiz_attempts: {
+        Row: {
+          answered_at: string
+          id: string
+          is_correct: boolean | null
+          points_earned: number | null
+          question_id: string | null
+          user_answer: string | null
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          id?: string
+          is_correct?: boolean | null
+          points_earned?: number | null
+          question_id?: string | null
+          user_answer?: string | null
+          user_id: string
+        }
+        Update: {
+          answered_at?: string
+          id?: string
+          is_correct?: boolean | null
+          points_earned?: number | null
+          question_id?: string | null
+          user_answer?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_quiz_questions: {
+        Row: {
+          competency_id: string | null
+          correct_answer: string
+          created_at: string
+          difficulty_level: string | null
+          explanation: string | null
+          id: string
+          is_active: boolean | null
+          learning_content_id: string | null
+          options: Json | null
+          points: number | null
+          question: string
+          question_type: string | null
+        }
+        Insert: {
+          competency_id?: string | null
+          correct_answer: string
+          created_at?: string
+          difficulty_level?: string | null
+          explanation?: string | null
+          id?: string
+          is_active?: boolean | null
+          learning_content_id?: string | null
+          options?: Json | null
+          points?: number | null
+          question: string
+          question_type?: string | null
+        }
+        Update: {
+          competency_id?: string | null
+          correct_answer?: string
+          created_at?: string
+          difficulty_level?: string | null
+          explanation?: string | null
+          id?: string
+          is_active?: boolean | null
+          learning_content_id?: string | null
+          options?: Json | null
+          points?: number | null
+          question?: string
+          question_type?: string | null
+        }
+        Relationships: []
+      }
+      coach_scenario_attempts: {
+        Row: {
+          answered_at: string
+          id: string
+          is_best_choice: boolean | null
+          points_earned: number | null
+          scenario_id: string | null
+          selected_option: string | null
+          user_id: string
+        }
+        Insert: {
+          answered_at?: string
+          id?: string
+          is_best_choice?: boolean | null
+          points_earned?: number | null
+          scenario_id?: string | null
+          selected_option?: string | null
+          user_id: string
+        }
+        Update: {
+          answered_at?: string
+          id?: string
+          is_best_choice?: boolean | null
+          points_earned?: number | null
+          scenario_id?: string | null
+          selected_option?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_scenarios: {
+        Row: {
+          best_option: string
+          competency_id: string | null
+          created_at: string
+          difficulty_level: string | null
+          feedback: Json | null
+          id: string
+          is_active: boolean | null
+          options: Json | null
+          points: number | null
+          scenario_text: string
+          scenario_type: string | null
+          title: string
+        }
+        Insert: {
+          best_option: string
+          competency_id?: string | null
+          created_at?: string
+          difficulty_level?: string | null
+          feedback?: Json | null
+          id?: string
+          is_active?: boolean | null
+          options?: Json | null
+          points?: number | null
+          scenario_text: string
+          scenario_type?: string | null
+          title: string
+        }
+        Update: {
+          best_option?: string
+          competency_id?: string | null
+          created_at?: string
+          difficulty_level?: string | null
+          feedback?: Json | null
+          id?: string
+          is_active?: boolean | null
+          options?: Json | null
+          points?: number | null
+          scenario_text?: string
+          scenario_type?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      coach_user_badges: {
+        Row: {
+          badge_id: string | null
+          earned_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_id?: string | null
+          earned_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string | null
+          earned_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_user_competency_scores: {
+        Row: {
+          competency_id: string | null
+          created_at: string
+          current_score: number | null
+          id: string
+          last_calculated_at: string
+          learning_engagement_score: number | null
+          practical_score: number | null
+          previous_score: number | null
+          quiz_score: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          competency_id?: string | null
+          created_at?: string
+          current_score?: number | null
+          id?: string
+          last_calculated_at?: string
+          learning_engagement_score?: number | null
+          practical_score?: number | null
+          previous_score?: number | null
+          quiz_score?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          competency_id?: string | null
+          created_at?: string
+          current_score?: number | null
+          id?: string
+          last_calculated_at?: string
+          learning_engagement_score?: number | null
+          practical_score?: number | null
+          previous_score?: number | null
+          quiz_score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_user_overall_scores: {
+        Row: {
+          created_at: string
+          id: string
+          last_calculated_at: string
+          overall_competency_score: number | null
+          overall_learning_score: number | null
+          rank_percentile: number | null
+          total_content_completed: number | null
+          total_correct_answers: number | null
+          total_points_earned: number | null
+          total_quizzes_attempted: number | null
+          total_scenarios_completed: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_calculated_at?: string
+          overall_competency_score?: number | null
+          overall_learning_score?: number | null
+          rank_percentile?: number | null
+          total_content_completed?: number | null
+          total_correct_answers?: number | null
+          total_points_earned?: number | null
+          total_quizzes_attempted?: number | null
+          total_scenarios_completed?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_calculated_at?: string
+          overall_competency_score?: number | null
+          overall_learning_score?: number | null
+          rank_percentile?: number | null
+          total_content_completed?: number | null
+          total_correct_answers?: number | null
+          total_points_earned?: number | null
+          total_quizzes_attempted?: number | null
+          total_scenarios_completed?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_user_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          learning_content_id: string | null
+          progress_percent: number | null
+          started_at: string | null
+          status: string | null
+          time_spent_seconds: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          learning_content_id?: string | null
+          progress_percent?: number | null
+          started_at?: string | null
+          status?: string | null
+          time_spent_seconds?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          learning_content_id?: string | null
+          progress_percent?: number | null
+          started_at?: string | null
+          status?: string | null
+          time_spent_seconds?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      coach_user_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number | null
+          id: string
+          last_activity_date: string | null
+          longest_streak: number | null
+          total_learning_days: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number | null
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number | null
+          total_learning_days?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number | null
+          id?: string
+          last_activity_date?: string | null
+          longest_streak?: number | null
+          total_learning_days?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      companies: {
+        Row: {
+          account_holder_name: string | null
+          address: string | null
+          bank_account: string | null
+          bank_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          email: string | null
+          gstin: string | null
+          header_logo_url: string | null
+          header_name: string | null
+          id: string
+          ifsc: string | null
+          invoice_template: string | null
+          logo_url: string | null
+          name: string
+          qr_code_url: string | null
+          qr_upi: string | null
+          state: string | null
+          terms_conditions: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_holder_name?: string | null
+          address?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          email?: string | null
+          gstin?: string | null
+          header_logo_url?: string | null
+          header_name?: string | null
+          id?: string
+          ifsc?: string | null
+          invoice_template?: string | null
+          logo_url?: string | null
+          name: string
+          qr_code_url?: string | null
+          qr_upi?: string | null
+          state?: string | null
+          terms_conditions?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_holder_name?: string | null
+          address?: string | null
+          bank_account?: string | null
+          bank_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          email?: string | null
+          gstin?: string | null
+          header_logo_url?: string | null
+          header_name?: string | null
+          id?: string
+          ifsc?: string | null
+          invoice_template?: string | null
+          logo_url?: string | null
+          name?: string
+          qr_code_url?: string | null
+          qr_upi?: string | null
+          state?: string | null
+          terms_conditions?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      company_product_categories: {
+        Row: {
+          categories_json: Json
+          company_id: string
+          created_at: string
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          categories_json?: Json
+          company_id: string
+          created_at?: string
+          id: number
+          updated_at?: string
+        }
+        Update: {
+          categories_json?: Json
+          company_id?: string
+          created_at?: string
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      competencies: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          level_definitions: Json | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          level_definitions?: Json | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          level_definitions?: Json | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      competency_coaching_notes: {
+        Row: {
+          acknowledged_at: string | null
+          action_items: Json | null
+          competency_template_id: string | null
+          created_at: string | null
+          id: string
+          is_acknowledged: boolean | null
+          manager_id: string
+          note: string
+          scorecard_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          action_items?: Json | null
+          competency_template_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_acknowledged?: boolean | null
+          manager_id: string
+          note: string
+          scorecard_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          action_items?: Json | null
+          competency_template_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_acknowledged?: boolean | null
+          manager_id?: string
+          note?: string
+          scorecard_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      competency_templates: {
+        Row: {
+          calculation_formula: Json
+          category: string
+          competency_code: string
+          competency_name: string
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          max_score: number | null
+          role_type: string
+          sort_order: number | null
+          updated_at: string | null
+          weightage: number
+        }
+        Insert: {
+          calculation_formula?: Json
+          category: string
+          competency_code: string
+          competency_name: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_score?: number | null
+          role_type: string
+          sort_order?: number | null
+          updated_at?: string | null
+          weightage: number
+        }
+        Update: {
+          calculation_formula?: Json
+          category?: string
+          competency_code?: string
+          competency_name?: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_score?: number | null
+          role_type?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          weightage?: number
+        }
+        Relationships: []
+      }
+      competition_contacts: {
+        Row: {
+          competitor_id: string
+          competitor_since: number | null
+          contact_email: string | null
+          contact_name: string
+          contact_phone: string | null
+          created_at: string
+          designation: string | null
+          hq: string | null
+          id: string
+          is_active: boolean | null
+          level: string | null
+          region_covered: string | null
+          reporting_to: string | null
+          role: string | null
+          skill: string | null
+          updated_at: string
+        }
+        Insert: {
+          competitor_id: string
+          competitor_since?: number | null
+          contact_email?: string | null
+          contact_name: string
+          contact_phone?: string | null
+          created_at?: string
+          designation?: string | null
+          hq?: string | null
+          id?: string
+          is_active?: boolean | null
+          level?: string | null
+          region_covered?: string | null
+          reporting_to?: string | null
+          role?: string | null
+          skill?: string | null
+          updated_at?: string
+        }
+        Update: {
+          competitor_id?: string
+          competitor_since?: number | null
+          contact_email?: string | null
+          contact_name?: string
+          contact_phone?: string | null
+          created_at?: string
+          designation?: string | null
+          hq?: string | null
+          id?: string
+          is_active?: boolean | null
+          level?: string | null
+          region_covered?: string | null
+          reporting_to?: string | null
+          role?: string | null
+          skill?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      competition_data: {
+        Row: {
+          competitor_id: string
+          created_at: string
+          id: string
+          impact_level: string | null
+          insight: string | null
+          needs_attention: boolean | null
+          photo_urls: string[] | null
+          retailer_id: string
+          selling_price: number | null
+          sku_id: string | null
+          stock_quantity: number | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+          visit_id: string | null
+          voice_note_urls: string[] | null
+        }
+        Insert: {
+          competitor_id: string
+          created_at?: string
+          id?: string
+          impact_level?: string | null
+          insight?: string | null
+          needs_attention?: boolean | null
+          photo_urls?: string[] | null
+          retailer_id: string
+          selling_price?: number | null
+          sku_id?: string | null
+          stock_quantity?: number | null
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+          visit_id?: string | null
+          voice_note_urls?: string[] | null
+        }
+        Update: {
+          competitor_id?: string
+          created_at?: string
+          id?: string
+          impact_level?: string | null
+          insight?: string | null
+          needs_attention?: boolean | null
+          photo_urls?: string[] | null
+          retailer_id?: string
+          selling_price?: number | null
+          sku_id?: string | null
+          stock_quantity?: number | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+          visit_id?: string | null
+          voice_note_urls?: string[] | null
+        }
+        Relationships: []
+      }
+      competition_insights: {
+        Row: {
+          action_required: boolean | null
+          additional_notes: string | null
+          category: string | null
+          competitor_image_url: string
+          competitor_name: string
+          created_at: string
+          description: string
+          id: string
+          impact_level: string | null
+          insight_type: string
+          location_info: string | null
+          price_info: string | null
+          product_category: string | null
+          product_details: string | null
+          retailer_id: string
+          shelf_space: string | null
+          updated_at: string
+          user_id: string
+          visit_id: string | null
+        }
+        Insert: {
+          action_required?: boolean | null
+          additional_notes?: string | null
+          category?: string | null
+          competitor_image_url?: string
+          competitor_name: string
+          created_at?: string
+          description: string
+          id?: string
+          impact_level?: string | null
+          insight_type: string
+          location_info?: string | null
+          price_info?: string | null
+          product_category?: string | null
+          product_details?: string | null
+          retailer_id: string
+          shelf_space?: string | null
+          updated_at?: string
+          user_id: string
+          visit_id?: string | null
+        }
+        Update: {
+          action_required?: boolean | null
+          additional_notes?: string | null
+          category?: string | null
+          competitor_image_url?: string
+          competitor_name?: string
+          created_at?: string
+          description?: string
+          id?: string
+          impact_level?: string | null
+          insight_type?: string
+          location_info?: string | null
+          price_info?: string | null
+          product_category?: string | null
+          product_details?: string | null
+          retailer_id?: string
+          shelf_space?: string | null
+          updated_at?: string
+          user_id?: string
+          visit_id?: string | null
+        }
+        Relationships: []
+      }
+      competition_master: {
+        Row: {
+          business_background: string | null
+          competitor_name: string
+          created_at: string
+          focus: string | null
+          head_office: string | null
+          id: string
+          key_financial_stats: Json | null
+          regional_offices_count: number | null
+          sales_team_size: number | null
+          strategy: string | null
+          supply_chain_info: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          business_background?: string | null
+          competitor_name: string
+          created_at?: string
+          focus?: string | null
+          head_office?: string | null
+          id?: string
+          key_financial_stats?: Json | null
+          regional_offices_count?: number | null
+          sales_team_size?: number | null
+          strategy?: string | null
+          supply_chain_info?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          business_background?: string | null
+          competitor_name?: string
+          created_at?: string
+          focus?: string | null
+          head_office?: string | null
+          id?: string
+          key_financial_stats?: Json | null
+          regional_offices_count?: number | null
+          sales_team_size?: number | null
+          strategy?: string | null
+          supply_chain_info?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      competition_skus: {
+        Row: {
+          competitor_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          sku_name: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          competitor_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          sku_name: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          competitor_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          sku_name?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      counter_sale_items: {
+        Row: {
+          base_qty: number | null
+          conversion_to_base: number | null
+          counter_sale_id: string
+          created_at: string
+          id: string
+          line_total: number
+          product_id: string
+          product_name: string
+          quantity: number
+          rate: number
+          uom_code: string | null
+          uom_id: string | null
+        }
+        Insert: {
+          base_qty?: number | null
+          conversion_to_base?: number | null
+          counter_sale_id: string
+          created_at?: string
+          id?: string
+          line_total: number
+          product_id: string
+          product_name: string
+          quantity: number
+          rate: number
+          uom_code?: string | null
+          uom_id?: string | null
+        }
+        Update: {
+          base_qty?: number | null
+          conversion_to_base?: number | null
+          counter_sale_id?: string
+          created_at?: string
+          id?: string
+          line_total?: number
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          rate?: number
+          uom_code?: string | null
+          uom_id?: string | null
+        }
+        Relationships: []
+      }
+      counter_sales: {
+        Row: {
+          cgst_amount: number | null
+          created_at: string
+          id: string
+          pos_customer_id: string | null
+          remarks: string | null
+          sale_date: string
+          sgst_amount: number | null
+          subtotal: number | null
+          tax_amount: number | null
+          total_amount: number
+          updated_at: string
+          user_id: string
+          visit_id: string | null
+          walkin_name: string | null
+          walkin_phone: string | null
+        }
+        Insert: {
+          cgst_amount?: number | null
+          created_at?: string
+          id?: string
+          pos_customer_id?: string | null
+          remarks?: string | null
+          sale_date?: string
+          sgst_amount?: number | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number
+          updated_at?: string
+          user_id: string
+          visit_id?: string | null
+          walkin_name?: string | null
+          walkin_phone?: string | null
+        }
+        Update: {
+          cgst_amount?: number | null
+          created_at?: string
+          id?: string
+          pos_customer_id?: string | null
+          remarks?: string | null
+          sale_date?: string
+          sgst_amount?: number | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+          visit_id?: string | null
+          walkin_name?: string | null
+          walkin_phone?: string | null
+        }
+        Relationships: []
+      }
+      credit_ledger: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          reference_id: string | null
+          retailer_id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reference_id?: string | null
+          retailer_id: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reference_id?: string | null
+          retailer_id?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      credit_management_config: {
+        Row: {
+          config_name: string | null
+          created_at: string | null
+          credit_multiplier: number
+          id: string
+          is_active: boolean | null
+          is_enabled: boolean
+          lookback_period_months: number
+          new_retailer_starting_score: number
+          payment_term_days: number
+          scoring_mode: string
+          target_growth_rate_percent: number | null
+          target_order_frequency: number | null
+          territory_ids: string[]
+          updated_at: string | null
+          weight_growth_rate: number
+          weight_order_frequency: number
+          weight_repayment_dso: number
+        }
+        Insert: {
+          config_name?: string | null
+          created_at?: string | null
+          credit_multiplier?: number
+          id?: string
+          is_active?: boolean | null
+          is_enabled?: boolean
+          lookback_period_months?: number
+          new_retailer_starting_score?: number
+          payment_term_days?: number
+          scoring_mode?: string
+          target_growth_rate_percent?: number | null
+          target_order_frequency?: number | null
+          territory_ids?: string[]
+          updated_at?: string | null
+          weight_growth_rate?: number
+          weight_order_frequency?: number
+          weight_repayment_dso?: number
+        }
+        Update: {
+          config_name?: string | null
+          created_at?: string | null
+          credit_multiplier?: number
+          id?: string
+          is_active?: boolean | null
+          is_enabled?: boolean
+          lookback_period_months?: number
+          new_retailer_starting_score?: number
+          payment_term_days?: number
+          scoring_mode?: string
+          target_growth_rate_percent?: number | null
+          target_order_frequency?: number | null
+          territory_ids?: string[]
+          updated_at?: string | null
+          weight_growth_rate?: number
+          weight_order_frequency?: number
+          weight_repayment_dso?: number
+        }
+        Relationships: []
+      }
+      credit_note_items: {
+        Row: {
+          barcode: string | null
+          cgst_amount: number | null
+          created_at: string | null
+          credit_note_id: string
+          hsn_code: string | null
+          id: string
+          original_invoice_number: string | null
+          original_order_id: string | null
+          product_id: string | null
+          product_name: string | null
+          quantity: number | null
+          rate: number | null
+          sgst_amount: number | null
+          taxable_amount: number | null
+          total: number | null
+          unit: string | null
+        }
+        Insert: {
+          barcode?: string | null
+          cgst_amount?: number | null
+          created_at?: string | null
+          credit_note_id: string
+          hsn_code?: string | null
+          id?: string
+          original_invoice_number?: string | null
+          original_order_id?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity?: number | null
+          rate?: number | null
+          sgst_amount?: number | null
+          taxable_amount?: number | null
+          total?: number | null
+          unit?: string | null
+        }
+        Update: {
+          barcode?: string | null
+          cgst_amount?: number | null
+          created_at?: string | null
+          credit_note_id?: string
+          hsn_code?: string | null
+          id?: string
+          original_invoice_number?: string | null
+          original_order_id?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity?: number | null
+          rate?: number | null
+          sgst_amount?: number | null
+          taxable_amount?: number | null
+          total?: number | null
+          unit?: string | null
+        }
+        Relationships: []
+      }
+      credit_notes: {
+        Row: {
+          amount_in_words: string | null
+          cgst_total: number | null
+          created_at: string | null
+          created_by: string | null
+          credit_note_date: string
+          credit_note_number: string
+          id: string
+          reason: string
+          reason_notes: string | null
+          retailer_id: string | null
+          retailer_name: string | null
+          sgst_total: number | null
+          status: string
+          sub_total: number | null
+          total_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount_in_words?: string | null
+          cgst_total?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          credit_note_date?: string
+          credit_note_number: string
+          id?: string
+          reason?: string
+          reason_notes?: string | null
+          retailer_id?: string | null
+          retailer_name?: string | null
+          sgst_total?: number | null
+          status?: string
+          sub_total?: number | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount_in_words?: string | null
+          cgst_total?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          credit_note_date?: string
+          credit_note_number?: string
+          id?: string
+          reason?: string
+          reason_notes?: string | null
+          retailer_id?: string | null
+          retailer_name?: string | null
+          sgst_total?: number | null
+          status?: string
+          sub_total?: number | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      custom_invoice_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          template_file_url: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          template_file_url: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          template_file_url?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      customer_portal_cart: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+          retailer_id: string
+          source: string
+          unit: string
+          updated_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity?: number
+          retailer_id: string
+          source?: string
+          unit?: string
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+          retailer_id?: string
+          source?: string
+          unit?: string
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          address: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          created_at: string | null
+          gstin: string | null
+          id: string
+          name: string
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          gstin?: string | null
+          id?: string
+          name: string
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          gstin?: string | null
+          id?: string
+          name?: string
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      daily_gps_distance: {
+        Row: {
+          date: string
+          id: string
+          point_count: number
+          total_km: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          date: string
+          id?: string
+          point_count?: number
+          total_km?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          date?: string
+          id?: string
+          point_count?: number
+          total_km?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
