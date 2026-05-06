@@ -5447,6 +5447,10 @@ CREATE TABLE public.working_days_config (
 -- FUNCTIONS
 -- ============================================================
 
+CREATE OR REPLACE FUNCTION public.get_distributor_id_for_auth_user()
+ RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO public
+AS $forward_stub$ SELECT NULL::uuid $forward_stub$;
+
 CREATE OR REPLACE FUNCTION public.allocate_inventory_batches(p_distributor_id uuid, p_product_id uuid, p_required_qty integer, p_strategy text DEFAULT 'FEFO'::text, p_warehouse_id uuid DEFAULT NULL::uuid)
  RETURNS jsonb
  LANGUAGE plpgsql
