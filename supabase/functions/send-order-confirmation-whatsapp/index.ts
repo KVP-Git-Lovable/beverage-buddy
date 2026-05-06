@@ -90,13 +90,12 @@ serve(async (req) => {
     const shortId = orderId.substring(0, 8);
     const message = `🛒 *Order Confirmation*\n\nHi *${retailer.name}*,\n\nYour order *#${shortId}* has been placed successfully!\n\n📦 *Order Items:*\n${itemLines}\n\n💰 *Total: ₹${Number(totalAmount).toFixed(2)}*\n\nThank you for your order! 🙏`;
 
-    // Send via Twilio
-    const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
-    if (!accountSid) throw new Error('TWILIO_ACCOUNT_SID not configured');
+    // Send via Twilio (use same hardcoded SID as send-invoice-whatsapp)
+    const accountSid = 'AC2bed17b2742df7031ebc7de2d726b62f';
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
     if (!authToken) throw new Error('TWILIO_AUTH_TOKEN not configured');
 
-    const fromNumber = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || '+917411681616';
+    const fromNumber = '+917411681616';
     const toNumber = retailer.phone.startsWith('+') ? retailer.phone : `+91${retailer.phone.replace(/\D/g, '')}`;
 
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
