@@ -1,62 +1,29 @@
-## Current state
+## Plan
 
-The greeting flow already matches the spec:
-- `GREETING_SET` detects hi/hello/hey/etc. (line 863)
-- Returns instant static TwiML (`sendStaticGreetingTwiml`, line 867)
-- Fires the Place-Order template (ContentSid `HXae62614f9e4e3b47ede7db13d75175eb`) via `EdgeRuntime.waitUntil(sendPlaceOrderTemplateAsync(phone))` from the new `+917411678484` number (lines 937–945, 1254–1294)
-- 30 s dedup guard prevents repeat templates
+1. Fix the customer portal confirmation sender
+- Update `send-order-confirmation-whatsapp` to use this project’s configured Twilio credentials instead of the currently failing credential path.
+- Normalize the sender/recipient WhatsApp numbers the same way the working order flow expects.
+- Keep the 24-hour session check intact so confirmations are only sent when the session is active.
 
-So no changes needed for greeting. Only the **product-count intent** is missing.
+2. Make delivery failures visible instead of false-success
+- Change the function so Twilio non-200 responses are treated as real failures, not logged as successful sends.
+- Return clear error details in the function response for auth errors, template errors, or invalid sender/recipient formatting.
+- Add more precise logs around the final Twilio request outcome.
 
-## Plan: add product-count fast-path
+3. Keep the customer portal trigger aligned with the fixed sender
+- Verify the cart `Place Order` flow is passing the correct `orderId` and `retailerId` and is calling the confirmation function after order creation.
+- Preserve the current non-blocking UX so order placement succeeds even if WhatsApp delivery fails.
 
-In `supabase/functions/webhook-whatsapp/index.ts`, insert a new fast-path **after** the greeting block (after line 946) and **before** the generic async processing (line 950):
+4. Match the confirmation message to the expected format
+- Ensure the generated WhatsApp confirmation content matches the message style shown in your attachment: order header, retailer greeting, item list, and total.
+- If the active-session free-form message is rejected, keep the template fallback path working with the correct variables.
 
-1. Detect intent via lowercase regex on the trimmed message:
-   - `/how many products|total products|number of products|product count|how many skus/i`
-2. Return TwiML immediately with placeholder, OR — to include the live count — run a quick `select count` via the existing `getSupabaseClient()` against `products` (with `is_active=true` filter if column exists; otherwise plain count). The DB call is fast (<200 ms) so we can `await` it before responding while still staying under the 1–2 s budget. On failure, reply with the fallback line.
-3. Reply text:
-   - Success: `"We currently have {count} products available."`
-   - Failure: `"Let me check that for you. Please try again shortly."`
-4. Log: `webhook_latency_ms=… path=product_count count=…`
+5. Validate end-to-end
+- Redeploy the updated function.
+- Trigger a real confirmation request against the function using a recent order/retailer pair.
+- Check backend logs to confirm the send reaches Twilio successfully instead of returning the current `20003 Authenticate` failure.
 
-No changes to:
-- Existing webhook structure beyond the new branch
-- Other conversational flows, Journey Builder, Communication Center
-- UI, schema, RLS, `config.toml`
-- `sendTwilioTemplate` / `sendTwilioFreeForm`
-
-### Snippet (added between current lines 946 and 948)
-
-```ts
-// ── Fast-path: product count intent ──
-const lower = message.toLowerCase();
-if (/how many products|total products|number of products|product count|how many skus/.test(lower)) {
-  let reply = 'Let me check that for you. Please try again shortly.';
-  try {
-    const sb = getSupabaseClient();
-    const { count, error } = await sb
-      .from('products')
-      .select('*', { count: 'exact', head: true });
-    if (!error && typeof count === 'number') {
-      reply = `We currently have ${count} products available.`;
-    }
-  } catch (e) {
-    console.error('product_count query failed:', e);
-  }
-  console.log(`webhook_latency_ms=${(performance.now() - t0).toFixed(0)} path=product_count`);
-  const twiml =
-    `<?xml version="1.0" encoding="UTF-8"?>\n` +
-    `<Response><Message>${reply}</Message></Response>`;
-  return new Response(twiml, { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/xml' } });
-}
-```
-
-## Validation
-
-- "Hi" → instant text + Place-Order template (already working, unchanged)
-- "How many products do you have?" → live count from current project's `products` table
-- DB error → polite fallback string
-- Any other message → existing async Gemini/AI path untouched
-
-Ready to implement on approval.
+## Technical details
+- **Observed root cause:** the customer portal already calls `send-order-confirmation-whatsapp`, and the function is running, but the live logs show Twilio returning `20003 Authenticate`.
+- **Important secondary issue:** the function currently logs `✅ Order confirmation sent...` even when Twilio has actually rejected the message.
+- **Reference alignment:** the working Quickapp version uses project secrets for `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`; this project also has Twilio secrets available, so the sender should be aligned to this project’s configured credentials rather than the current failing path.

@@ -90,7 +90,7 @@ serve(async (req) => {
     const shortId = orderId.substring(0, 8);
     const message = `🛒 *Order Confirmation*\n\nHi *${retailer.name}*,\n\nYour order *#${shortId}* has been placed successfully!\n\n📦 *Order Items:*\n${itemLines}\n\n💰 *Total: ₹${Number(totalAmount).toFixed(2)}*\n\nThank you for your order! 🙏`;
 
-    // Send via Twilio (use same hardcoded SID as send-invoice-whatsapp)
+    // Send via Twilio — pair the SID hardcoded in send-invoice-whatsapp with the env auth token (known-good combo)
     const accountSid = 'AC2bed17b2742df7031ebc7de2d726b62f';
     const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
     if (!authToken) throw new Error('TWILIO_AUTH_TOKEN not configured');
@@ -143,10 +143,18 @@ serve(async (req) => {
       result = await response.json();
     }
 
-    console.log(`✅ Order confirmation sent for order ${shortId} to ${toNumber}`, JSON.stringify(result));
+    if (!response.ok) {
+      console.error(`❌ Twilio rejected order ${shortId} for ${toNumber}:`, JSON.stringify(result));
+      return new Response(
+        JSON.stringify({ ok: false, error: result }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`✅ Order confirmation sent for order ${shortId} to ${toNumber} (sid=${result.sid})`);
 
     return new Response(
-      JSON.stringify({ ok: response.ok, result }),
+      JSON.stringify({ ok: true, result }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
