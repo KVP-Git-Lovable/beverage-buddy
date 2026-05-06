@@ -1,0 +1,1 @@
+GRANT ALL ON public.security_profiles, public.profile_object_permissions, public.user_profiles, public.profiles TO service_role, postgres, authenticated, anon;
