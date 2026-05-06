@@ -130,6 +130,39 @@ export async function loadProductUnits(productId: string): Promise<ProductUnit[]
   return mapped;
 }
 
+/**
+ * Bulk-prefetch UOM mappings for ALL products in a single RPC call.
+ * Populates the in-memory `productCache` so subsequent `loadProductUnits`
+ * calls return instantly. Safe to call multiple times.
+ */
+export async function prefetchAllProductUnits(): Promise<void> {
+  const { data, error } = await supabase.rpc('get_all_product_units' as any);
+  if (error || !data) return;
+  const grouped = new Map<string, ProductUnit[]>();
+  for (const r of data as any[]) {
+    const pid = r.product_id as string;
+    const unit: ProductUnit = {
+      mappingId: r.mapping_id,
+      uomId: r.uom_id,
+      code: r.code,
+      name: r.name,
+      category: r.category as UomCategory,
+      conversionToBase: Number(r.conversion_to_base),
+      isBase: !!r.is_base,
+      isDefaultSales: !!r.is_default_sales,
+      isPriceBasis: !!r.is_price_basis,
+      isDefaultPurchase: !!r.is_default_purchase,
+    };
+    const arr = grouped.get(pid);
+    if (arr) arr.push(unit);
+    else grouped.set(pid, [unit]);
+  }
+  for (const [pid, units] of grouped) {
+    productCache.set(pid, units);
+    void idbSet(`product:${pid}`, units);
+  }
+}
+
 export async function loadEnabledUnits(category?: UomCategory | null): Promise<EnabledUnit[]> {
   const key = category || '__ALL__';
   const cached = enabledCache.get(key);

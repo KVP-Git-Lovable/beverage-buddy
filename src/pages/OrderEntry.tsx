@@ -29,7 +29,7 @@ import { WifiOff, Wifi, MapPin, CheckCircle2, AlertTriangle } from "lucide-react
 import { useRetailerVisitTracking } from "@/hooks/useRetailerVisitTracking";
 import { RetailerVisitDetailsModal } from "@/components/RetailerVisitDetailsModal";
 import { UnitSelect, UnitRateDisplay } from "@/components/order-entry/UnitControls";
-import { loadProductUnits } from "@/lib/uomEngine";
+import { loadProductUnits, prefetchAllProductUnits } from "@/lib/uomEngine";
 import { getLocalTodayDate } from "@/utils/dateUtils";
 import { OrderGuideManualButton } from "@/components/OrderGuideManualButton";
 import {
@@ -256,6 +256,9 @@ export const OrderEntry = () => {
     };
     
     fetchUserId();
+    // Prefetch UOM mappings for ALL products in one RPC so the per-line
+    // Unit dropdown is populated instantly when a product is selected.
+    void prefetchAllProductUnits();
   }, []);
 
   // Reset auto-expand flag whenever category changes
