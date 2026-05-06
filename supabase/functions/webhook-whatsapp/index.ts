@@ -1252,19 +1252,22 @@ function sendEmptyTwiml(): Response {
 }
 
 async function sendTwilioTemplate(to: string): Promise<void> {
-  const accountSid = 'AC2bed17b2742df7031ebc7de2d726b62f';
+  const accountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
   const authToken = Deno.env.get('TWILIO_AUTH_TOKEN');
-  if (!authToken) {
-    console.error('TWILIO_AUTH_TOKEN not configured, skipping template send');
+  if (!accountSid || !authToken) {
+    console.error('TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not configured, skipping template send');
     return;
   }
 
   const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
   const base64Auth = btoa(`${accountSid}:${authToken}`);
 
+  const fromEnv = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+917411678484';
+  const fromFormatted = fromEnv.startsWith('whatsapp:') ? fromEnv : `whatsapp:${fromEnv}`;
+
   const formBody = new URLSearchParams({
     To: to,
-    From: 'whatsapp:+917411681616',
+    From: fromFormatted,
     ContentSid: 'HXae62614f9e4e3b47ede7db13d75175eb',
     ContentVariables: JSON.stringify({}),
   });
