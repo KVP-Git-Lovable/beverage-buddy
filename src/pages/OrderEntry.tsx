@@ -922,15 +922,36 @@ export const OrderEntry = () => {
   }, [isOnline, fetchOfflineProducts]);
   */
 
-  // Filter products by category and search term
-  const filteredProducts = products.filter(product => {
-    // Category filter
-    const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+  // Filter products by category and search term (memoized so pagination is stable)
+  const filteredProducts = React.useMemo(() => {
+    return products.filter(product => {
+      const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
+      const matchesSearch = searchTerm.trim() === "" || product.name.toLowerCase().includes(searchTerm.toLowerCase()) || product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()) || product.variants && product.variants.some(v => v.variant_name.toLowerCase().includes(searchTerm.toLowerCase()) || v.sku.toLowerCase().includes(searchTerm.toLowerCase()));
+      return matchesCategory && matchesSearch;
+    });
+  }, [products, selectedCategory, searchTerm]);
 
-    // Search filter - search in product name, SKU, and variant names
-    const matchesSearch = searchTerm.trim() === "" || product.name.toLowerCase().includes(searchTerm.toLowerCase()) || product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()) || product.variants && product.variants.some(v => v.variant_name.toLowerCase().includes(searchTerm.toLowerCase()) || v.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
+  // Paginate the grid view to 15 products per page to keep the DOM light
+  const {
+    paginatedItems: paginatedProducts,
+    currentPage,
+    totalPages,
+    startIndex,
+    endIndex,
+    totalItems,
+    hasNextPage,
+    hasPrevPage,
+    nextPage,
+    prevPage,
+    goToPage,
+  } = usePagination(filteredProducts, { pageSize: 15 });
+
+  // Reset to page 1 whenever the filter inputs change
+  useEffect(() => {
+    goToPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, searchTerm]);
+
   // PERF: avoid logging large product arrays during render
   const handleQuantityChange = (productId: string, quantity: number) => {
     console.log('Quantity changed:', {
