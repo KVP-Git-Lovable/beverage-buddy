@@ -2820,8 +2820,24 @@ export const OrderEntry = () => {
                       </div>
                   </CardContent>
                </Card>;
-            })}
+             })}
            </div>
+
+           {/* Pagination — show 15 products per page */}
+           {!offlineLoading && filteredProducts.length > 0 && (
+             <PaginationControls
+               currentPage={currentPage}
+               totalPages={totalPages}
+               startIndex={startIndex}
+               endIndex={endIndex}
+               totalItems={totalItems}
+               hasNextPage={hasNextPage}
+               hasPrevPage={hasPrevPage}
+               onNextPage={nextPage}
+               onPrevPage={prevPage}
+               onGoToPage={goToPage}
+             />
+           )}
 
         </div>
         </> : (/* Table Order Form */
