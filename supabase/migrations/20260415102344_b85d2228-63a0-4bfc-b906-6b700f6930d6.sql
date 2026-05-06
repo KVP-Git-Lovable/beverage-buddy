@@ -1,0 +1,1 @@
+ALTER TABLE pincode_master ADD COLUMN IF NOT EXISTS is_custom_area boolean NOT NULL DEFAULT false;

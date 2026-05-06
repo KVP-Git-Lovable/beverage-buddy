@@ -1,0 +1,1 @@
+ALTER TABLE public.packing_lists ADD COLUMN IF NOT EXISTS warehouse_id UUID REFERENCES public.warehouses(id);

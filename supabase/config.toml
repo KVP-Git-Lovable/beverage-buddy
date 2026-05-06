@@ -1,0 +1,58 @@
+project_id = "aoxdosjkwqyuvccuwhzc"
+
+[functions.beat-health-insights]
+verify_jwt = false
+
+[functions.admin-get-users]
+verify_jwt = false
+
+[functions.admin-delete-user]
+verify_jwt = false
+
+[functions.admin-create-user]
+verify_jwt = false
+
+[functions.sprint-summary]
+verify_jwt = false
+
+[functions.pm-ai-assistant]
+verify_jwt = false
+
+[functions.scan-bill]
+verify_jwt = false
+
+[functions.set-distributor-portal-password]
+verify_jwt = false
+
+[functions.webhook-whatsapp]
+verify_jwt = false
+
+[functions.customer-portal-chat]
+verify_jwt = false
+
+[functions.customer-portal-photo-order]
+verify_jwt = false
+
+[functions.voice-order-parser]
+verify_jwt = false
+
+[functions.elevenlabs-tts-stream]
+verify_jwt = false
+
+[functions.district-intelligence]
+verify_jwt = false
+
+[functions.calculate-match-scores]
+verify_jwt = false
+
+[functions.reverse-geocode-unsorted]
+verify_jwt = false
+
+[functions.send-order-confirmation-whatsapp]
+verify_jwt = false
+
+[functions.pincode-market-intelligence]
+verify_jwt = false
+
+[functions.get-pincode-top-retailers]
+verify_jwt = false

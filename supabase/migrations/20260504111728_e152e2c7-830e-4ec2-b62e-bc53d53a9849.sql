@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.bulk_apply_product_piece_setup(jsonb, uuid);

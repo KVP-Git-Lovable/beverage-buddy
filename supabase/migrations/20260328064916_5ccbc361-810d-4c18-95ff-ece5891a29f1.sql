@@ -1,0 +1,2 @@
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS beat_id TEXT;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS territory_id TEXT;

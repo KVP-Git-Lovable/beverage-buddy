@@ -1,0 +1,1 @@
+ALTER TABLE public.product_schemes ADD COLUMN show_in_portal BOOLEAN DEFAULT FALSE;

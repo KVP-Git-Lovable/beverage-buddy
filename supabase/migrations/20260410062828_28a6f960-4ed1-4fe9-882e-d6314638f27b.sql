@@ -1,0 +1,1 @@
+ALTER TABLE retailer_external_unsorted ADD COLUMN address text;

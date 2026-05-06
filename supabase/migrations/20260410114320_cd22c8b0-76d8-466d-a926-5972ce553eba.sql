@@ -1,0 +1,1 @@
+ALTER TABLE territories ADD COLUMN IF NOT EXISTS territory_po_list text[];

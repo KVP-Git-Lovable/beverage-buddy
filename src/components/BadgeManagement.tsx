@@ -1,0 +1,362 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { Plus, Trash2, Award, Pencil } from "lucide-react";
+
+interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  criteria_type: string;
+  criteria_value: number;
+  badge_color: string;
+}
+
+const CRITERIA_TYPES = [
+  { value: "order_count", label: "Order Count" },
+  { value: "retailer_count", label: "Retailer Count" },
+  { value: "revenue", label: "Revenue Amount" },
+  { value: "insights_count", label: "Competition Insights" },
+  { value: "rank_top", label: "Top Rank Position" },
+  { value: "top_10_months", label: "Months in Top 10" }
+];
+
+const BADGE_COLORS = ["gold", "silver", "blue", "green", "purple", "red", "orange"];
+
+export function BadgeManagement() {
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingBadge, setEditingBadge] = useState<Badge | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    icon: "🏆",
+    criteria_type: "order_count",
+    criteria_value: "0",
+    badge_color: "blue"
+  });
+
+  useEffect(() => {
+    fetchBadges();
+  }, []);
+
+  const fetchBadges = async () => {
+    const { data } = await supabase
+      .from("badges")
+      .select("*")
+      .order("created_at", { ascending: false });
+    
+    if (data) setBadges(data);
+  };
+
+  const createBadge = async () => {
+    if (!formData.name || !formData.criteria_value) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("badges")
+      .insert({
+        name: formData.name,
+        description: formData.description,
+        icon: formData.icon,
+        criteria_type: formData.criteria_type,
+        criteria_value: parseFloat(formData.criteria_value),
+        badge_color: formData.badge_color
+      });
+
+    if (error) {
+      toast.error("Failed to create badge");
+    } else {
+      toast.success("Badge created successfully");
+      setShowCreateDialog(false);
+      setFormData({
+        name: "",
+        description: "",
+        icon: "🏆",
+        criteria_type: "order_count",
+        criteria_value: "0",
+        badge_color: "blue"
+      });
+      fetchBadges();
+    }
+  };
+
+  const openEditDialog = (badge: Badge) => {
+    setEditingBadge(badge);
+    setFormData({
+      name: badge.name,
+      description: badge.description || "",
+      icon: badge.icon,
+      criteria_type: badge.criteria_type,
+      criteria_value: badge.criteria_value.toString(),
+      badge_color: badge.badge_color
+    });
+    setShowEditDialog(true);
+  };
+
+  const updateBadge = async () => {
+    if (!editingBadge || !formData.name || !formData.criteria_value) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("badges")
+      .update({
+        name: formData.name,
+        description: formData.description,
+        icon: formData.icon,
+        criteria_type: formData.criteria_type,
+        criteria_value: parseFloat(formData.criteria_value),
+        badge_color: formData.badge_color
+      })
+      .eq("id", editingBadge.id);
+
+    if (error) {
+      toast.error("Failed to update badge");
+    } else {
+      toast.success("Badge updated successfully");
+      setShowEditDialog(false);
+      setEditingBadge(null);
+      setFormData({
+        name: "",
+        description: "",
+        icon: "🏆",
+        criteria_type: "order_count",
+        criteria_value: "0",
+        badge_color: "blue"
+      });
+      fetchBadges();
+    }
+  };
+
+  const deleteBadge = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this badge?")) return;
+
+    const { error } = await supabase
+      .from("badges")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Failed to delete badge");
+    } else {
+      toast.success("Badge deleted");
+      fetchBadges();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Badge Management</h2>
+          <p className="text-muted-foreground">Create and manage achievement badges</p>
+        </div>
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Badge
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Badge</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">Badge Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Century Maker"
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Complete 100 orders"
+                />
+              </div>
+              <div>
+                <Label htmlFor="icon">Icon (Emoji)</Label>
+                <Input
+                  id="icon"
+                  value={formData.icon}
+                  onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                  placeholder="🏆"
+                />
+              </div>
+              <div>
+                <Label htmlFor="criteria_type">Criteria Type *</Label>
+                <Select value={formData.criteria_type} onValueChange={(v) => setFormData({ ...formData, criteria_type: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CRITERIA_TYPES.map(type => (
+                      <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="criteria_value">Criteria Value *</Label>
+                <Input
+                  id="criteria_value"
+                  type="number"
+                  value={formData.criteria_value}
+                  onChange={(e) => setFormData({ ...formData, criteria_value: e.target.value })}
+                  placeholder="100"
+                />
+              </div>
+              <div>
+                <Label htmlFor="badge_color">Badge Color</Label>
+                <Select value={formData.badge_color} onValueChange={(v) => setFormData({ ...formData, badge_color: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BADGE_COLORS.map(color => (
+                      <SelectItem key={color} value={color}>{color}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={createBadge} className="w-full">Create Badge</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Badge</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">Badge Name *</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Century Maker"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Complete 100 orders"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-icon">Icon (Emoji)</Label>
+              <Input
+                id="edit-icon"
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                placeholder="🏆"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-criteria_type">Criteria Type *</Label>
+              <Select value={formData.criteria_type} onValueChange={(v) => setFormData({ ...formData, criteria_type: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CRITERIA_TYPES.map(type => (
+                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-criteria_value">Criteria Value *</Label>
+              <Input
+                id="edit-criteria_value"
+                type="number"
+                value={formData.criteria_value}
+                onChange={(e) => setFormData({ ...formData, criteria_value: e.target.value })}
+                placeholder="100"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-badge_color">Badge Color</Label>
+              <Select value={formData.badge_color} onValueChange={(v) => setFormData({ ...formData, badge_color: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BADGE_COLORS.map(color => (
+                    <SelectItem key={color} value={color}>{color}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={updateBadge} className="w-full">Update Badge</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {badges.map(badge => (
+          <Card key={badge.id}>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span className="text-3xl">{badge.icon}</span>
+                  {badge.name}
+                </span>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openEditDialog(badge)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteBadge(badge.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-2">{badge.description}</p>
+              <div className="text-xs space-y-1">
+                <p><strong>Type:</strong> {CRITERIA_TYPES.find(t => t.value === badge.criteria_type)?.label}</p>
+                <p><strong>Target:</strong> {badge.criteria_value}</p>
+                <p><strong>Color:</strong> {badge.badge_color}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}

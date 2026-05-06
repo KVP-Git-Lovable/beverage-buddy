@@ -1,0 +1,1 @@
+UPDATE public.tax_masters SET effective_to = '2027-12-31' WHERE id = 'c231805d-b21e-4198-ac5d-16d2c4d8466e';

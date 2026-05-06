@@ -1,0 +1,1 @@
+ALTER TABLE pincode_master ADD COLUMN IF NOT EXISTS taluka text DEFAULT 'Not available';

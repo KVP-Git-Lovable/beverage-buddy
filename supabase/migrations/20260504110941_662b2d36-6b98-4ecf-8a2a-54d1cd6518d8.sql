@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS public.product_data_import_staging;

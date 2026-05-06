@@ -1,0 +1,2 @@
+-- Drop the stale overloaded signature that still sets status = 'processing'
+DROP FUNCTION IF EXISTS public.create_packing_list_atomic(uuid, date, text, uuid, numeric, jsonb, uuid[], jsonb, jsonb, text);
