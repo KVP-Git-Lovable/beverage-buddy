@@ -947,6 +947,33 @@ serve(async (req) => {
 
     console.log(`📩 WhatsApp from ${phone}: "${message}" (SID: ${messageSid})`);
 
+    // ── Fast-path: product count intent ──
+    const lowerMsg = message.toLowerCase();
+    if (/how many products|total products|number of products|product count|how many skus/.test(lowerMsg)) {
+      let reply = 'Let me check that for you. Please try again shortly.';
+      try {
+        const sb = getSupabaseClient();
+        const { count, error } = await sb
+          .from('products')
+          .select('*', { count: 'exact', head: true });
+        if (!error && typeof count === 'number') {
+          reply = `We currently have ${count} products available.`;
+        } else if (error) {
+          console.error('product_count query error:', error);
+        }
+      } catch (e) {
+        console.error('product_count exception:', e);
+      }
+      console.log(`webhook_latency_ms=${(performance.now() - t0).toFixed(0)} path=product_count`);
+      const twiml =
+        `<?xml version="1.0" encoding="UTF-8"?>\n` +
+        `<Response><Message>${reply}</Message></Response>`;
+      return new Response(twiml, {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'text/xml' },
+      });
+    }
+
     // ── All other messages: process in background, return empty TwiML now ──
     // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
     EdgeRuntime.waitUntil(processMessageAsync(phone, message));
