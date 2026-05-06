@@ -310,6 +310,23 @@ serve(async (req) => {
 
     console.log('Auth user created/updated:', authUserId);
 
+    // Defensive: ensure a profiles row exists for this user.
+    // The on_auth_user_created trigger normally handles this, but we upsert
+    // here as a safety net so the user always appears in User Management.
+    const { error: profileUpsertError } = await supabaseAdmin
+      .from('profiles')
+      .upsert({
+        id: authUserId,
+        username: username || (email ? email.split('@')[0] : null),
+        full_name: full_name || username || (email ? email.split('@')[0] : null)
+      }, { onConflict: 'id', ignoreDuplicates: false });
+
+    if (profileUpsertError) {
+      console.error('Profile upsert error (non-blocking):', profileUpsertError);
+    } else {
+      console.log('Profile row ensured for user');
+    }
+
     // Create employee record for new user
     const { error: employeeError } = await supabaseAdmin
       .from('employees')
