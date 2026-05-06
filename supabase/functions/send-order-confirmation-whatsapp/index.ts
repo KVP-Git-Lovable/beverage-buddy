@@ -96,7 +96,7 @@ serve(async (req) => {
     if (!accountSid) throw new Error('TWILIO_ACCOUNT_SID not configured');
     if (!authToken) throw new Error('TWILIO_AUTH_TOKEN not configured');
 
-    const fromNumber = '+917411681616';
+    const fromNumber = '+917411678484';
     const toNumber = retailer.phone.startsWith('+') ? retailer.phone : `+91${retailer.phone.replace(/\D/g, '')}`;
 
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
