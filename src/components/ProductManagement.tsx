@@ -903,9 +903,14 @@ const [productForm, setProductForm] = useState({
         gst_percentage: null
       });
       fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving product:', error);
-      toast.error('Failed to save product');
+      const msg =
+        error?.message ||
+        error?.details ||
+        error?.hint ||
+        (typeof error === 'string' ? error : JSON.stringify(error));
+      toast.error(`Failed to save product: ${msg}`);
     }
   };
 
