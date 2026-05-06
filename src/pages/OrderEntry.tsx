@@ -29,7 +29,7 @@ import { WifiOff, Wifi, MapPin, CheckCircle2, AlertTriangle } from "lucide-react
 import { useRetailerVisitTracking } from "@/hooks/useRetailerVisitTracking";
 import { RetailerVisitDetailsModal } from "@/components/RetailerVisitDetailsModal";
 import { UnitSelect, UnitRateDisplay } from "@/components/order-entry/UnitControls";
-import { loadProductUnits } from "@/lib/uomEngine";
+import { loadProductUnits, prefetchAllProductUnits } from "@/lib/uomEngine";
 import { getLocalTodayDate } from "@/utils/dateUtils";
 import { OrderGuideManualButton } from "@/components/OrderGuideManualButton";
 import {
