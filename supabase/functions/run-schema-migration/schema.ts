@@ -3717,29 +3717,6 @@ CREATE TABLE public.product_variants (
   hsn_code text
 );
 
-CREATE TABLE public.productive_summary_daywise (
-  planned_date text,
-  productive_visits bigint,
-  unproductive_visits bigint,
-  total_visits bigint,
-  productivity_percentage numeric
-);
-
-CREATE TABLE public.productive_summary_week (
-  planned_date text,
-  productive_visits bigint,
-  unproductive_visits bigint,
-  total_visits bigint,
-  productivity_percentage numeric
-);
-
-CREATE TABLE public.productive_view (
-  full_name text,
-  productive_visits bigint,
-  total_visits bigint,
-  productivity_percentage numeric
-);
-
 CREATE TABLE public.products (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   sku text NOT NULL,
@@ -4084,12 +4061,6 @@ CREATE TABLE public.retailer_loyalty_actions (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   target_config jsonb DEFAULT '{}'::jsonb
-);
-
-CREATE TABLE public.retailer_loyalty_balance (
-  retailer_id uuid,
-  total_points numeric,
-  total_transactions bigint
 );
 
 CREATE TABLE public.retailer_loyalty_feedback (
