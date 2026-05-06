@@ -1,4 +1,5 @@
-export const SCHEMA_SQL = `-- =====================================================================
+export const SCHEMA_SQL = `SET check_function_bodies = off;
+-- =====================================================================
 -- Supabase project: aoxdosjkwqyuvccuwhzc  (schema-only dump, reconstructed)
 -- Generated 2026-05-05 from pg_catalog. Equivalent to pg_dump --schema-only
 -- for the public schema. Excludes Supabase-managed schemas (auth, storage,
