@@ -30,6 +30,8 @@ import { useRetailerVisitTracking } from "@/hooks/useRetailerVisitTracking";
 import { RetailerVisitDetailsModal } from "@/components/RetailerVisitDetailsModal";
 import { UnitSelect, UnitRateDisplay } from "@/components/order-entry/UnitControls";
 import { loadProductUnits, prefetchAllProductUnits } from "@/lib/uomEngine";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationControls } from "@/components/ui/PaginationControls";
 import { getLocalTodayDate } from "@/utils/dateUtils";
 import { OrderGuideManualButton } from "@/components/OrderGuideManualButton";
 import {
