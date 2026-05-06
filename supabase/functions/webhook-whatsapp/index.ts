@@ -1301,9 +1301,15 @@ async function twilioGatewayPost(formBody: URLSearchParams): Promise<{ ok: boole
   return { ok: response.ok, status: response.status, result };
 }
 
+function resolveTwilioFromNumber(): string {
+  const raw = Deno.env.get('TWILIO_WHATSAPP_NUMBER');
+  const valid = raw && !raw.includes('PLACEHOLDER') && /\+?\d/.test(raw);
+  const num = valid ? raw! : '+917411678484';
+  return num.startsWith('whatsapp:') ? num : `whatsapp:${num}`;
+}
+
 async function sendTwilioTemplate(to: string): Promise<void> {
-  const fromEnv = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+917411678484';
-  const fromFormatted = fromEnv.startsWith('whatsapp:') ? fromEnv : `whatsapp:${fromEnv}`;
+  const fromFormatted = resolveTwilioFromNumber();
   const toFormatted = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
 
   const formBody = new URLSearchParams({
@@ -1327,8 +1333,7 @@ async function sendTwilioTemplate(to: string): Promise<void> {
 
 // ── Twilio free-form WhatsApp send (Body), with 24h-window template fallback ──
 async function sendTwilioFreeForm(to: string, body: string): Promise<void> {
-  const fromNumber = Deno.env.get('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+917411678484';
-  const fromFormatted = fromNumber.startsWith('whatsapp:') ? fromNumber : `whatsapp:${fromNumber}`;
+  const fromFormatted = resolveTwilioFromNumber();
   const toFormatted = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
 
   try {
