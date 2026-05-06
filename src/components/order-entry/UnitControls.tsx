@@ -32,6 +32,15 @@ export const UnitSelect: React.FC<{
 }> = ({ productId, baseRate, value, onChange, className }) => {
   const { activeUnits, defaultUnitCode, loading } = useUnitPrice(productId, baseRate);
 
+  // Auto-select the Product Master default unit as soon as it's known,
+  // so order-entry rows show a unit (and price) without requiring user input.
+  React.useEffect(() => {
+    if (!loading && !value && defaultUnitCode) {
+      onChange(defaultUnitCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, defaultUnitCode, value]);
+
   // Empty mapping → disabled error placeholder. The product is misconfigured;
   // admin must add UOM rows in Product Master before this product can be ordered.
   if (!loading && activeUnits.length === 0) {
