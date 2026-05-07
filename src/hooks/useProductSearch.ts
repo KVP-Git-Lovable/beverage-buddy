@@ -211,8 +211,20 @@ export function useProductSearch(
           if (reqIdRef.current !== myReq) return; // stale
 
           if (error) {
-            console.warn('[useProductSearch] RPC error, falling back to local:', error.message);
-            setResults(localPreview);
+            console.warn(
+              '[useProductSearch] RPC error, trying direct query fallback:',
+              error.message,
+            );
+            // Direct fast fallback against products table (RPC sometimes
+            // hits statement timeout because of heavy UOM joins).
+            const rows = await directProductSearch(term, normalizedCategory);
+            if (reqIdRef.current !== myReq) return;
+            if (rows && rows.length > 0) {
+              cacheSet(key, rows);
+              setResults(rows);
+            } else {
+              setResults(localPreview);
+            }
           } else {
             const rows = (data || []) as unknown as ProductSearchResult[];
             cacheSet(key, rows);
