@@ -29,17 +29,46 @@ export const UnitSelect: React.FC<{
   value: string | undefined;
   onChange: (code: string) => void;
   className?: string;
-}> = ({ productId, baseRate, value, onChange, className }) => {
+  /** Optional hint codes (from search row) so the Select renders instantly
+   *  even before the per-product UOM mapping has loaded. */
+  hintAllowedCodes?: string[];
+  hintDefaultCode?: string;
+}> = ({ productId, baseRate, value, onChange, className, hintAllowedCodes, hintDefaultCode }) => {
   const { activeUnits, defaultUnitCode, loading } = useUnitPrice(productId, baseRate);
 
   // Auto-select the Product Master default unit as soon as it's known,
   // so order-entry rows show a unit (and price) without requiring user input.
   React.useEffect(() => {
-    if (!loading && !value && defaultUnitCode) {
-      onChange(defaultUnitCode);
+    if (!value && (defaultUnitCode || hintDefaultCode)) {
+      onChange(defaultUnitCode || hintDefaultCode || '');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, defaultUnitCode, value]);
+  }, [defaultUnitCode, hintDefaultCode, value]);
+
+  // While the per-product UOM mapping is still loading but we have hint codes
+  // from the search row, render an instant Select from those hints.
+  const useHints = loading && activeUnits.length === 0 && (hintAllowedCodes?.length || hintDefaultCode);
+
+  if (useHints) {
+    const codes = (hintAllowedCodes && hintAllowedCodes.length > 0
+      ? hintAllowedCodes
+      : [hintDefaultCode!]).filter(Boolean) as string[];
+    const effective = value || hintDefaultCode || codes[0] || '';
+    return (
+      <Select value={effective} onValueChange={onChange}>
+        <SelectTrigger className={className || 'h-6 text-xs p-1 w-full'}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {codes.map((c) => (
+            <SelectItem key={c} value={c}>
+              {c}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }
 
   // Empty mapping → disabled error placeholder. The product is misconfigured;
   // admin must add UOM rows in Product Master before this product can be ordered.

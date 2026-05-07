@@ -49,6 +49,14 @@ export interface EnabledUnit {
 const productCache = new Map<string, ProductUnit[]>();
 const enabledCache = new Map<string, EnabledUnit[]>(); // key: category || '__ALL__'
 
+/** Synchronous read of cached UOM mappings for a product, or undefined.
+ *  Used by hooks to seed React Query `initialData` so the Unit dropdown
+ *  renders in the same frame as product selection (no loading state). */
+export function getCachedProductUnits(productId: string | null | undefined): ProductUnit[] | undefined {
+  if (!productId) return undefined;
+  return productCache.get(productId);
+}
+
 // ----------------------------- IndexedDB (offline) -------------------------
 const DB_NAME = 'uom-cache';
 const DB_VERSION = 1;

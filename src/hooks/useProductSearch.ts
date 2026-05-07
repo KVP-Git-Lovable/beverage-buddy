@@ -33,6 +33,8 @@ export interface ProductSearchResult {
   is_active: boolean | null;
   category_name: string | null;
   is_focused_product: boolean | null;
+  default_uom_code?: string | null;
+  allowed_uom_codes?: string[] | null;
   variants: ProductSearchVariant[];
 }
 
@@ -184,7 +186,7 @@ export function useProductSearch(
             console.warn('[useProductSearch] RPC error, falling back to local:', error.message);
             setResults(localPreview);
           } else {
-            const rows = (data || []) as ProductSearchResult[];
+            const rows = (data || []) as unknown as ProductSearchResult[];
             cacheSet(key, rows);
             setResults(rows);
           }
