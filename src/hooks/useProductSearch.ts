@@ -184,7 +184,7 @@ export function useProductSearch(
             console.warn('[useProductSearch] RPC error, falling back to local:', error.message);
             setResults(localPreview);
           } else {
-            const rows = (data || []) as ProductSearchResult[];
+            const rows = (data || []) as unknown as ProductSearchResult[];
             cacheSet(key, rows);
             setResults(rows);
           }
