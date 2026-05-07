@@ -39,7 +39,7 @@ export interface ProductSearchResult {
 }
 
 const MIN_CHARS = 2;
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 150;
 const PAGE_SIZE = 100; // dropdown shows up to 100 matches per query
 const LRU_MAX = 20;
 
@@ -62,6 +62,26 @@ const cacheSet = (k: CacheKey, v: ProductSearchResult[]) => {
     cache.delete(firstKey);
   }
 };
+
+/**
+ * Warm the empty-query cache so the first popover open is instant.
+ * Safe to call multiple times — bails out if cached or offline.
+ */
+export async function prefetchInitialProductSearch(category: string = 'all') {
+  const k = cacheKey('', category);
+  if (cacheGet(k)) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  try {
+    const { data, error } = await supabase.rpc('search_products_for_order', {
+      p_query: '',
+      p_category: category && category !== 'all' ? category : null,
+      p_limit: PAGE_SIZE,
+    });
+    if (!error && data) cacheSet(k, data as unknown as ProductSearchResult[]);
+  } catch {
+    /* ignore — will fetch on first open */
+  }
+}
 
 function offlineFilter(
   products: any[],

@@ -48,13 +48,11 @@ function ProductPickerPopoverInner({
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const deferredInput = useDeferredValue(inputValue);
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const debouncedQuery = deferredInput.trim();
 
-  // Debounce the deferred (low-priority) input value
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(deferredInput.trim()), 250);
-    return () => clearTimeout(t);
-  }, [deferredInput]);
+  // Single debounce now lives inside useProductSearch (150ms). Removed the
+  // outer 250ms wrapper that was stacking on top of it and causing the
+  // dropdown to feel slow vs. Customer Portal.
 
   const {
     results: searchResults,
@@ -142,7 +140,6 @@ function ProductPickerPopoverInner({
     setOpen(next);
     if (!next) {
       setInputValue("");
-      setDebouncedQuery("");
     }
   };
 
@@ -217,7 +214,7 @@ function ProductPickerPopoverInner({
                         onSelect(rowId, option);
                         setOpen(false);
                         setInputValue("");
-                        setDebouncedQuery("");
+                        
                       }}
                       onMouseMove={(e) => e.preventDefault()}
                       className="text-xs md:text-sm bg-background hover:bg-accent py-2"
