@@ -375,6 +375,11 @@ export const ProductDataImportButton = ({ onImported }: Props) => {
       if (row.gst_percentage != null && !Number.isNaN(row.gst_percentage)) {
         productPatch.gst_percentage = row.gst_percentage;
       }
+      if (row.name) productPatch.name = row.name;
+      if (row.unit) productPatch.unit = row.unit;
+      if (row.rate_per_unit != null && !Number.isNaN(row.rate_per_unit)) {
+        productPatch.rate = row.rate_per_unit;
+      }
 
       await withRetry(async () => {
         const { error: patchErr } = await supabase
