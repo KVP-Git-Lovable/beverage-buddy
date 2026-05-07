@@ -1202,6 +1202,8 @@ export const TableOrderForm = forwardRef<TableOrderFormHandle, TableOrderFormPro
                           value={row.unit || undefined}
                           onChange={(value) => updateRow(row.id, "unit", value)}
                           className="h-9 md:h-11 text-xs md:text-sm w-full bg-background px-2"
+                          hintAllowedCodes={(row.product as any)?._allowed_uom_codes ?? undefined}
+                          hintDefaultCode={(row.product as any)?._default_uom_code ?? undefined}
                         />
                       ) : (
                         <Select disabled value="">

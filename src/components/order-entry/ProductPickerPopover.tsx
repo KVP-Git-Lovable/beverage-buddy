@@ -88,18 +88,19 @@ function ProductPickerPopoverInner({
           is_active: v.is_active !== false,
           is_focused_product: v.is_focused_product ?? false,
         })),
+        // Hint UOM codes from server row — used by UnitSelect for instant render
+        _default_uom_code: r.default_uom_code ?? null,
+        _allowed_uom_codes: r.allowed_uom_codes ?? null,
       };
     };
 
-    const q = debouncedQuery.toLowerCase();
-    const matchesQuery = (...fields: (string | undefined | null)[]) => {
-      if (!q) return true;
-      return fields.some((f) => (f || "").toLowerCase().includes(q));
-    };
+    // NOTE: server-side RPC has already filtered by query+category. Do NOT
+    // re-filter on the client — that was hiding products like "WINOLAP" when
+    // the offline-hydrated row's `name` differed from the server row.
 
     for (const r of searchResults) {
       const product = hydrate(r);
-      if (matchesQuery(product.name, product.sku)) {
+      {
         options.push({
           value: product.id,
           label: `${product.name} | ₹${product.rate}`,
@@ -112,10 +113,6 @@ function ProductPickerPopoverInner({
       if (product.variants && product.variants.length > 0) {
         for (const variant of product.variants) {
           if (variant.is_active === false) continue;
-          if (
-            !matchesQuery(variant.variant_name, variant.sku, product.name, product.sku)
-          )
-            continue;
           options.push({
             value: `${product.id}_variant_${variant.id}`,
             label: `${variant.variant_name} | ₹${variant.price}`,
