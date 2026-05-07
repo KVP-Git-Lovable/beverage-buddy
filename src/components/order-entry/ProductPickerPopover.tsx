@@ -91,15 +91,13 @@ function ProductPickerPopoverInner({
       };
     };
 
-    const q = debouncedQuery.toLowerCase();
-    const matchesQuery = (...fields: (string | undefined | null)[]) => {
-      if (!q) return true;
-      return fields.some((f) => (f || "").toLowerCase().includes(q));
-    };
+    // NOTE: server-side RPC has already filtered by query+category. Do NOT
+    // re-filter on the client — that was hiding products like "WINOLAP" when
+    // the offline-hydrated row's `name` differed from the server row.
 
     for (const r of searchResults) {
       const product = hydrate(r);
-      if (matchesQuery(product.name, product.sku)) {
+      {
         options.push({
           value: product.id,
           label: `${product.name} | ₹${product.rate}`,
