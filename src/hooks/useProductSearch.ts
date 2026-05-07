@@ -33,6 +33,8 @@ export interface ProductSearchResult {
   is_active: boolean | null;
   category_name: string | null;
   is_focused_product: boolean | null;
+  default_uom_code?: string | null;
+  allowed_uom_codes?: string[] | null;
   variants: ProductSearchVariant[];
 }
 
