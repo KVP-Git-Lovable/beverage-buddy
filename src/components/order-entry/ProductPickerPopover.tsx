@@ -214,7 +214,7 @@ function ProductPickerPopoverInner({
                         onSelect(rowId, option);
                         setOpen(false);
                         setInputValue("");
-                        setDebouncedQuery("");
+                        
                       }}
                       onMouseMove={(e) => e.preventDefault()}
                       className="text-xs md:text-sm bg-background hover:bg-accent py-2"
