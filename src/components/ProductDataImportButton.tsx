@@ -270,9 +270,68 @@ export const ProductDataImportButton = ({ onImported }: Props) => {
     row: ImportRow,
     skuToProductId: Map<string, string>,
   ): Promise<RowResult> => {
-    const productId = skuToProductId.get(row.sku);
+    let productId = skuToProductId.get(row.sku);
+
+    // If product does not exist yet, create a minimal product row first.
     if (!productId) {
-      return { sku: row.sku, status: 'skipped', message: 'SKU not found in products' };
+      if (!row.name) {
+        return { sku: row.sku, status: 'error', message: 'name is required to create a new product.' };
+      }
+      try {
+        const insertPayload: Record<string, unknown> = {
+          sku: row.sku,
+          name: row.name,
+          rate: row.rate_per_unit ?? 0,
+          unit: row.unit || 'piece',
+        };
+        if (row.gst_percentage != null && !Number.isNaN(row.gst_percentage)) {
+          insertPayload.gst_percentage = row.gst_percentage;
+        }
+        const inserted = await withRetry(async () => {
+          const { data, error } = await supabase
+            .from('products')
+            .insert(insertPayload as any)
+            .select('id')
+            .single();
+          if (error) throw error;
+          return data;
+        }, 'insert new product');
+        productId = (inserted as any).id;
+        skuToProductId.set(row.sku, productId!);
+      } catch (err: any) {
+        return { sku: row.sku, status: 'error', message: `Create failed: ${err?.message ?? err}` };
+      }
+    }
+
+    // UOM/base-category processing is optional. If not provided, just patch core fields.
+    const hasUomFields =
+      row.base_category || row.price_basis_unit_code || row.default_sales_unit_code;
+
+    if (!hasUomFields) {
+      const productPatch: Record<string, unknown> = {};
+      if (row.name) productPatch.name = row.name;
+      if (row.unit) productPatch.unit = row.unit;
+      if (row.rate_per_unit != null && !Number.isNaN(row.rate_per_unit)) {
+        productPatch.rate = row.rate_per_unit;
+      }
+      if (row.gst_percentage != null && !Number.isNaN(row.gst_percentage)) {
+        productPatch.gst_percentage = row.gst_percentage;
+      }
+      if (Object.keys(productPatch).length === 0) {
+        return { sku: row.sku, status: 'success' };
+      }
+      try {
+        await withRetry(async () => {
+          const { error } = await supabase
+            .from('products')
+            .update(productPatch as any)
+            .eq('id', productId!);
+          if (error) throw error;
+        }, 'update product');
+        return { sku: row.sku, status: 'success' };
+      } catch (err: any) {
+        return { sku: row.sku, status: 'error', message: err?.message ?? String(err) };
+      }
     }
 
     const category = NORMALISED_CATEGORIES[row.base_category.toLowerCase()];
