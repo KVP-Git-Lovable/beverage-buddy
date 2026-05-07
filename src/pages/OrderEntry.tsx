@@ -922,12 +922,32 @@ export const OrderEntry = () => {
   }, [isOnline, fetchOfflineProducts]);
   */
 
+  // Map of product id -> product, used by hot paths so we don't scan the
+  // full 20k catalog on each render (cart totals, selection details, etc.)
+  const productsById = React.useMemo(() => {
+    const m = new Map<string, any>();
+    for (const p of products) m.set(p.id, p);
+    return m;
+  }, [products]);
+
   // Filter products by category and search term (memoized so pagination is stable)
   const filteredProducts = React.useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    const noQuery = q === "";
+    const allCats = selectedCategory === "All";
+    if (noQuery && allCats) return products;
     return products.filter(product => {
-      const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
-      const matchesSearch = searchTerm.trim() === "" || product.name.toLowerCase().includes(searchTerm.toLowerCase()) || product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()) || product.variants && product.variants.some(v => v.variant_name.toLowerCase().includes(searchTerm.toLowerCase()) || v.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-      return matchesCategory && matchesSearch;
+      if (!allCats && product.category !== selectedCategory) return false;
+      if (noQuery) return true;
+      if (product.name?.toLowerCase().includes(q)) return true;
+      if (product.sku?.toLowerCase().includes(q)) return true;
+      if (product.variants) {
+        for (const v of product.variants) {
+          if (v.variant_name?.toLowerCase().includes(q)) return true;
+          if (v.sku?.toLowerCase().includes(q)) return true;
+        }
+      }
+      return false;
     });
   }, [products, selectedCategory, searchTerm]);
 
@@ -1492,77 +1512,54 @@ export const OrderEntry = () => {
   };
 
   // Calculate total value from selected quantities and variants with auto-calculation
+  // PERF: iterate the (small) quantities map instead of the full ~20k product list.
   const getSelectionValue = () => {
-    // In table mode, rely on cart snapshot from TableOrderForm for immediate header updates
     if (orderMode === "table") {
       const cartTotal = cart.reduce((sum, item) => sum + (Number(item.total) || Number(item.rate) * Number(item.quantity) || 0), 0);
       return Number(cartTotal) || 0;
     }
     let total = 0;
-
-    // Include all products regardless of category to match cart behavior
-    products.forEach(product => {
-      // Check base product quantity
-      const baseQty = Number(quantities[product.id]) || 0;
-      if (baseQty > 0) {
+    for (const key of Object.keys(quantities)) {
+      const qty = Number(quantities[key]) || 0;
+      if (qty <= 0) continue;
+      const isVariant = key.includes('_variant_');
+      const baseId = isVariant ? key.split('_variant_')[0] : key;
+      const product = productsById.get(baseId);
+      if (!product) continue;
+      if (isVariant) {
+        const variantId = key.split('_variant_')[1];
+        const variant = product.variants?.find((v: any) => v.id === variantId);
+        if (!variant) continue;
+        const basePrice = Number(variant.price) || 0;
+        const discountPct = Number(variant.discount_percentage) || 0;
+        const discountAmt = Number(variant.discount_amount) || 0;
+        const variantPrice = discountPct > 0 ? basePrice - basePrice * discountPct / 100 : discountAmt > 0 ? basePrice - discountAmt : basePrice;
+        const { totalDiscount } = calculateSchemeDiscount(product.id, variant.id, qty, variantPrice);
+        total += qty * variantPrice - (Number(totalDiscount) || 0);
+      } else {
         const productRate = Number(product.rate) || 0;
-        const {
-          totalDiscount
-        } = calculateSchemeDiscount(product.id, null, baseQty, productRate);
-        const discountValue = Number(totalDiscount) || 0;
-        const subtotal = baseQty * productRate - discountValue;
-        total += Number(subtotal) || 0;
+        const { totalDiscount } = calculateSchemeDiscount(product.id, null, qty, productRate);
+        total += qty * productRate - (Number(totalDiscount) || 0);
       }
-
-      // Check all variant quantities using composite IDs
-      if (product.variants) {
-        product.variants.forEach(variant => {
-          const variantCompositeId = `${product.id}_variant_${variant.id}`;
-          const variantQty = Number(quantities[variantCompositeId]) || 0;
-          if (variantQty > 0) {
-            const basePrice = Number(variant.price) || 0;
-            const discountPct = Number(variant.discount_percentage) || 0;
-            const discountAmt = Number(variant.discount_amount) || 0;
-            const variantPrice = discountPct > 0 ? basePrice - basePrice * discountPct / 100 : discountAmt > 0 ? basePrice - discountAmt : basePrice;
-            const {
-              totalDiscount
-            } = calculateSchemeDiscount(product.id, variant.id, variantQty, variantPrice);
-            const discountValue = Number(totalDiscount) || 0;
-            const subtotal = variantQty * variantPrice - discountValue;
-            total += Number(subtotal) || 0;
-          }
-        });
-      }
-    });
+    }
     return Number(total) || 0;
   };
 
-  // Get total selected items count
+  // Get total selected items count (cart-driven, not catalog-driven)
   const getSelectionItemCount = () => {
     let count = 0;
-    products.forEach(product => {
-      // Count base product quantity
-      const baseQty = quantities[product.id] || 0;
-      count += baseQty;
-
-      // Count all variant quantities
-      if (product.variants) {
-        product.variants.forEach(variant => {
-          const variantQty = quantities[variant.id] || 0;
-          count += variantQty;
-        });
-      }
-    });
+    for (const key of Object.keys(quantities)) {
+      count += Number(quantities[key]) || 0;
+    }
     return count;
   };
 
   // Get current selection details for order summary
   const getSelectionDetails = () => {
-    // In table mode, derive directly from cart snapshot
     if (orderMode === "table") {
       const items = cart.map(ci => {
         const baseId = ci.id.includes('_variant_') ? ci.id.split('_variant_')[0] : ci.id;
-        const product = products.find(p => p.id === baseId);
+        const product = productsById.get(baseId);
         const savings = Math.max(0, Number(ci.rate) * Number(ci.quantity) - Number(ci.total || 0));
         const appliedOffers: string[] = [];
         if (savings > 0) appliedOffers.push(`Savings: ₹${savings.toFixed(2)}`);
@@ -1579,77 +1576,58 @@ export const OrderEntry = () => {
         };
       });
       const totalSavings = items.reduce((s, it) => s + (Number(it.savings) || 0), 0);
-      return {
-        items,
-        totalSavings
-      };
+      return { items, totalSavings };
     }
     const items: any[] = [];
     let totalSavings = 0;
-    console.log('Getting selection details with current quantities:', quantities);
 
-    // Include all products regardless of category
-    products.forEach(product => {
-      // Check base product quantity
-      const baseQty = quantities[product.id] || 0;
-      if (baseQty > 0) {
-        const total = baseQty * product.rate;
-        const {
-          totalDiscount
-        } = calculateSchemeDiscount(product.id, null, baseQty, product.rate);
+    for (const key of Object.keys(quantities)) {
+      const qty = Number(quantities[key]) || 0;
+      if (qty <= 0) continue;
+      const isVariant = key.includes('_variant_');
+      const baseId = isVariant ? key.split('_variant_')[0] : key;
+      const product = productsById.get(baseId);
+      if (!product) continue;
+
+      if (!isVariant) {
+        const total = qty * product.rate;
+        const { totalDiscount } = calculateSchemeDiscount(product.id, null, qty, product.rate);
         totalSavings += totalDiscount;
         items.push({
           id: product.id,
           variantName: product.name,
           selectedItem: product.name,
-          quantity: baseQty,
+          quantity: qty,
           rate: product.rate,
           totalPrice: total - totalDiscount,
           savings: totalDiscount,
           appliedOffers: totalDiscount > 0 ? [`Scheme discount: ₹${totalDiscount.toFixed(2)}`] : []
         });
-      }
-
-      // Check all variant quantities - only for variants of this specific product
-      if (product.variants) {
-        product.variants.forEach(variant => {
-          // FIX: use composite id for variant quantities
-          const variantCompositeId = `${product.id}_variant_${variant.id}`;
-          const variantQty = quantities[variantCompositeId] || 0;
-          if (variantQty > 0) {
-            const variantPrice = variant.discount_percentage > 0 ? variant.price - variant.price * variant.discount_percentage / 100 : variant.discount_amount > 0 ? variant.price - variant.discount_amount : variant.price;
-            const variantSavings = variant.discount_percentage > 0 ? variant.price * variant.discount_percentage / 100 : variant.discount_amount;
-            const baseTotal = variantQty * variantPrice;
-            const {
-              totalDiscount
-            } = calculateSchemeDiscount(product.id, variant.id, variantQty, variantPrice);
-            totalSavings += variantSavings * variantQty + totalDiscount;
-            const appliedOffers = [] as string[];
-            if (variantSavings > 0) {
-              appliedOffers.push(`Variant discount: ₹${(variantSavings * variantQty).toFixed(2)}`);
-            }
-            if (totalDiscount > 0) {
-              appliedOffers.push(`Scheme discount: ₹${totalDiscount.toFixed(2)}`);
-            }
-            items.push({
-              id: `${product.id}_variant_${variant.id}`,
-              variantName: variant.variant_name,
-              selectedItem: variant.variant_name,
-              quantity: variantQty,
-              rate: variant.price,
-              // Use original price, not discounted
-              totalPrice: baseTotal - totalDiscount,
-              savings: variantSavings * variantQty + totalDiscount,
-              appliedOffers
-            });
-          }
+      } else {
+        const variantId = key.split('_variant_')[1];
+        const variant = product.variants?.find((v: any) => v.id === variantId);
+        if (!variant) continue;
+        const variantPrice = variant.discount_percentage > 0 ? variant.price - variant.price * variant.discount_percentage / 100 : variant.discount_amount > 0 ? variant.price - variant.discount_amount : variant.price;
+        const variantSavings = variant.discount_percentage > 0 ? variant.price * variant.discount_percentage / 100 : variant.discount_amount;
+        const baseTotal = qty * variantPrice;
+        const { totalDiscount } = calculateSchemeDiscount(product.id, variant.id, qty, variantPrice);
+        totalSavings += variantSavings * qty + totalDiscount;
+        const appliedOffers: string[] = [];
+        if (variantSavings > 0) appliedOffers.push(`Variant discount: ₹${(variantSavings * qty).toFixed(2)}`);
+        if (totalDiscount > 0) appliedOffers.push(`Scheme discount: ₹${totalDiscount.toFixed(2)}`);
+        items.push({
+          id: `${product.id}_variant_${variant.id}`,
+          variantName: variant.variant_name,
+          selectedItem: variant.variant_name,
+          quantity: qty,
+          rate: variant.price,
+          totalPrice: baseTotal - totalDiscount,
+          savings: variantSavings * qty + totalDiscount,
+          appliedOffers
         });
       }
-    });
-    return {
-      items,
-      totalSavings
-    };
+    }
+    return { items, totalSavings };
   };
 
   // Handle adding all selected items to cart
@@ -1672,7 +1650,7 @@ export const OrderEntry = () => {
     // Add all items to cart
     items.forEach(item => {
       const baseProductId = item.id.split('_')[0];
-      const product = products.find(p => p.id === baseProductId);
+      const product = productsById.get(baseProductId);
 
       // Check if this is a variant or base product
       const isVariant = item.id.includes('_variant_');
@@ -1738,7 +1716,7 @@ export const OrderEntry = () => {
     const newCartItems: CartItem[] = [];
     items.forEach(item => {
       const baseProductId = item.id.split('_')[0];
-      const product = products.find(p => p.id === baseProductId);
+      const product = productsById.get(baseProductId);
 
       // Check if this is a variant or base product
       const isVariant = item.id.includes('_variant_');
@@ -2911,7 +2889,7 @@ export const OrderEntry = () => {
             count
           }) => {
             // Try to find product by ID first
-            let matchedProduct = products.find(p => p.id === productId);
+            let matchedProduct = productsById.get(productId);
 
             // If not found by ID, try to match by name (case-insensitive and partial match)
             if (!matchedProduct && productName) {
