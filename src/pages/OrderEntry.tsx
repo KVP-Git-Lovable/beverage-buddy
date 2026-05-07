@@ -922,12 +922,32 @@ export const OrderEntry = () => {
   }, [isOnline, fetchOfflineProducts]);
   */
 
+  // Map of product id -> product, used by hot paths so we don't scan the
+  // full 20k catalog on each render (cart totals, selection details, etc.)
+  const productsById = React.useMemo(() => {
+    const m = new Map<string, any>();
+    for (const p of products) m.set(p.id, p);
+    return m;
+  }, [products]);
+
   // Filter products by category and search term (memoized so pagination is stable)
   const filteredProducts = React.useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    const noQuery = q === "";
+    const allCats = selectedCategory === "All";
+    if (noQuery && allCats) return products;
     return products.filter(product => {
-      const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
-      const matchesSearch = searchTerm.trim() === "" || product.name.toLowerCase().includes(searchTerm.toLowerCase()) || product.sku && product.sku.toLowerCase().includes(searchTerm.toLowerCase()) || product.variants && product.variants.some(v => v.variant_name.toLowerCase().includes(searchTerm.toLowerCase()) || v.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-      return matchesCategory && matchesSearch;
+      if (!allCats && product.category !== selectedCategory) return false;
+      if (noQuery) return true;
+      if (product.name?.toLowerCase().includes(q)) return true;
+      if (product.sku?.toLowerCase().includes(q)) return true;
+      if (product.variants) {
+        for (const v of product.variants) {
+          if (v.variant_name?.toLowerCase().includes(q)) return true;
+          if (v.sku?.toLowerCase().includes(q)) return true;
+        }
+      }
+      return false;
     });
   }, [products, selectedCategory, searchTerm]);
 
