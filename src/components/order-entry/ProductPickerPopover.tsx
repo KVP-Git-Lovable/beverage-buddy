@@ -110,10 +110,6 @@ function ProductPickerPopoverInner({
       if (product.variants && product.variants.length > 0) {
         for (const variant of product.variants) {
           if (variant.is_active === false) continue;
-          if (
-            !matchesQuery(variant.variant_name, variant.sku, product.name, product.sku)
-          )
-            continue;
           options.push({
             value: `${product.id}_variant_${variant.id}`,
             label: `${variant.variant_name} | ₹${variant.price}`,
