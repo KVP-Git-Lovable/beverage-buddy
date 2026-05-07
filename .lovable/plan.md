@@ -1,112 +1,80 @@
-## Why Order Entry is slow today
+## Goal
+Replace `/order-entry`'s 20k-product IDB load with the same server-side `search_products_for_order` pattern the Customer Portal uses, make the Unit dropdown render in the same frame as product selection, and fail cleanly when offline.
 
-Confirmed against the running project:
-
-- `products` has **20,234 rows** (20,228 active); `product_variants` and `product_schemes` are 0 today but the code still loads them.
-- `useOfflineOrderEntry` (used by `OrderEntry.tsx`) loads the whole catalog into React state and into IndexedDB on every visit:
-  - Reads all ~20k rows from IDB and pushes them into a single React state array.
-  - Then in the background re-pages all 20k rows from Supabase, **clears** the IDB store, and re-writes 20k rows one by one. The flood of `✅ Saved to products` in the console is exactly this.
-- `OrderEntry.tsx` runs many `products.forEach` / `products.filter` / `products.find` passes on the 20k array for cart totals, selection details, scheme matching, voice matching — every render scans the whole catalog.
-- `ProductPickerPopover` already uses the server RPC `search_products_for_order` (with `gin_trgm_ops` indexes on `name` / `sku`), so search is the cheap part. The expensive parts are the full-catalog load + write + render loops.
-
-Goal: keep offline ordering and offline search fully working, but stop ever holding the full 20k catalog in React or rewriting it in IDB on every visit.
+## Important findings before coding
+- **`search_products_for_order` does NOT currently return UOM data.** Its RETURNS shape (migration `20260504090556`) is `id, sku, name, rate, unit, closing_stock, is_active, category_name, is_focused_product, variants`. There is **no `default_uom` and no `allowed_uoms`**. The user's Step 2 in Change 3 assumes those fields exist — they don't. We must either extend the RPC or read units from the already-prefetched UOM cache (`productCache` in `src/lib/uomEngine.ts` filled by `prefetchAllProductUnits`).
+- **The RPC also has no `is_focused` / `is_focused: true` parameter.** Featured-products mode needs an RPC change or a different empty-query path.
+- `useOfflineOrderEntry` is imported by other places too — we'll only stop using its `products`/`syncProductsInBackground` from `OrderEntry.tsx`, not delete the hook.
+- UOM conversion math in `UnitRateDisplay` requires `conversion_to_base` per UOM, which only `product_uom_mapping` carries — not flat strings. So even if we add codes to the search RPC, `UnitRateDisplay` still needs the prefetched UOM cache to compute prices correctly.
 
 ## Plan
 
-### 1. Lightweight offline search catalog (new IDB store)
+### Change 1 — Extend `search_products_for_order` (DB migration)
+Add to the RETURNS shape and SELECT:
+- `default_uom_code text` — the `is_default_sales` PUM row's UOM code, falling back to base.
+- `allowed_uom_codes text[]` — array of all enabled UOM codes for the product (from PUM joined to `uom_master`, filtered by enabled).
+- New parameter `p_is_focused boolean DEFAULT NULL` — when true, restricts results to `is_focused_product = true` (used for the empty-query "featured" path).
 
-- New IDB object store: `products_lite`. Per row only: `id, sku, name, brand, category_name, unit, default_uom, gst, rate, is_active, is_focused_product, search_keywords, updated_at`.
-- New SECURITY DEFINER RPC `sync_products_lite_delta(p_since timestamptz, p_limit int)` returning the same shape (joins `product_categories.name`, computes a normalized `search_keywords` from name+sku+brand). Indexes used: existing trigram + a new `products(updated_at)` index.
-- First sync pages everything (~20k rows × ~12 fields ≈ small) and stores it.
-- Subsequent syncs only fetch rows where `updated_at > watermark`. Watermark stored under a `meta` IDB key. Deleted/`is_active=false` rows are removed from the lite store.
-- Offline search runs against `products_lite` using a substring/keyword filter so single letters like `U`, `M`, `L`, `Z` work instantly without network. Online search continues to call `search_products_for_order` (server is faster on 20k rows).
+Implementation: one `LEFT JOIN LATERAL` aggregation against `product_uom_mapping`. No schema changes to `products`. Drop the legacy 3-arg signature explicitly to avoid overload (per project convention).
 
-### 2. Stop loading full catalog into React
+### Change 2 — Remove IDB product loading from `OrderEntry.tsx`
+- Drop the destructured `products: cachedProducts`, `syncProductsInBackground`, etc. from `useOfflineOrderEntry()`. (Keep the hook intact for other consumers.)
+- Remove the `[products, setProducts]` state, the cached-products → grid mapping block (around L809-L876), the auto-expand-on-load effect (L271-L285), and the `prefetchAllProductUnits()` call at L263.
+- Remove `filteredProducts` derived from the in-memory array and the grid pagination over it.
+- **Keep**: `sync_queue` IDB store, order placement, upload-on-reconnect, scheme calc, voice/chat ordering, table-mode submission.
 
-Replace `useOfflineOrderEntry`'s "all products in state" model with a **working set**:
+### Change 3 — Wire server-side search (table + grid mode)
+Mirror the Customer Portal pattern:
+- React Query `useInfiniteQuery` (or `useQuery` with `keepPreviousData: true`) keyed by `['order-entry-search', debouncedTerm, selectedCategory, isFocusedMode]`.
+- 300 ms debounce on the search input.
+- Calls: `supabase.rpc('search_products_for_order', { p_query, p_category, p_limit: 40, p_is_focused })`. Empty term → `p_is_focused = true`.
+- 6 s `AbortController` timeout → inline error: "Search unavailable — check your connection".
+- The picker in `ProductPickerPopover` already uses `useProductSearch`, which already calls this RPC; we'll align it to the new signature and the new `p_is_focused` empty-state path.
+- Grid mode: render the page from the same query result (page size 40), no in-memory filter.
 
-- Focused products (`is_focused_product = true`).
-- Last N products this rep ordered (mined from local order history / IDB).
-- Cart products (always hydrated from `products_lite` first, then fetched on demand if missing).
-- Currently visible page in grid mode.
+### Change 4 — Unit dropdown renders instantly
+The data source for `UnitSelect`/`UnitRateDisplay` already exists, but it's wired to `useProductUnits` which awaits a per-product RPC. Two-layer fix:
+1. **Synchronous unit list from search row.** Pass `allowed_uom_codes` + `default_uom_code` (added in Change 1) directly into `UnitSelect` as a prop. The Select renders these immediately on selection — same render frame, no spinner, no `loading` gate.
+2. **Conversion factors load in parallel for `UnitRateDisplay`.** The price-per-unit math still requires `conversion_to_base` from `product_uom_mapping`. Use the existing in-memory `productCache` (seeded by `prefetchAllProductUnits` on app boot) so `useUnitPrice` resolves synchronously when cache is hit. If a cache miss occurs (rare new product), fall back to displaying the base rate without blocking the Select.
+3. Remove any `{!isLoadingDetails && <UnitSelect />}` wrapper — none exists today, but verify and assert.
 
-Anything outside that working set is fetched on demand (RPC by id, or via search). No code path returns "all products" anymore.
+`onProductSelected` shape:
+```ts
+function onProductSelected(rowId, productId) {
+  setSelectedProduct(rowId, searchResults.find(p => p.id === productId));   // sync
+  if (!detailCache.current.has(productId)) {
+    supabase.rpc('get_product_details', { p_id: productId })
+      .then(({ data }) => detailCache.current.set(productId, data));        // parallel, schemes/variants
+  }
+}
+```
+`detailCache` is a `useRef(new Map<string, ProductDetails>())` — session-scoped, never re-fetches the same product.
 
-### 3. Lazy-load heavy product details
+### Change 5 — Offline UX (clean block, no crash)
+- Reuse the existing `useConnectivity` hook (already in `src/hooks/useConnectivity.ts`).
+- When `status === 'offline'`:
+  - Show a non-dismissible top banner: "You are offline. Product search is unavailable. Please reconnect to continue."
+  - Disable the search input and the product picker (`disabled` on the Popover trigger and the `Add row` button).
+  - Disable the Place Order button.
+  - Cart contents stay intact and visible.
+- When `status === 'online'`: banner hides, controls re-enable, query refetches via React Query's `refetchOnReconnect: true`.
 
-- New RPC `get_product_details(p_id uuid)` returning the heavy bits: schemes, variants, full UOM rows, current stock, price-list overrides.
-- React Query hook `useProductDetails(productId)` with `staleTime: 5m` is called only when:
-  - User picks the product in the picker / grid.
-  - Cart row needs scheme/UOM math.
-  - Voice/chat assistant resolves a match and needs to add it.
-- `useProductUnits` / `useUnitPrice` continue to work — they already lazy-load per product.
+## Files to touch
+- `supabase/migrations/<new>.sql` — extend `search_products_for_order` (drop old signature, new return cols, `p_is_focused`).
+- `src/pages/OrderEntry.tsx` — remove IDB product wiring, add search query + offline gating, pass UOM codes to `UnitSelect`, add detail cache.
+- `src/hooks/useProductSearch.ts` — accept `p_is_focused`, surface new UOM fields on `ProductSearchResult`.
+- `src/components/order-entry/UnitControls.tsx` — accept `allowedUomCodes` + `defaultUomCode` props; render Select synchronously from them; keep `useUnitPrice` only for the price display.
+- `src/components/order-entry/ProductPickerPopover.tsx` — propagate the new fields when an option is chosen.
 
-### 4. Delta sync, never full clear
+## What we deliberately do NOT change
+- `useOfflineOrderEntry` (other consumers depend on it).
+- `sync_queue`, order placement, upload-on-reconnect, voice/chat order flow.
+- Customer Portal, admin pages, PM pages, scheme calculator, UOM conversion engine.
 
-- `useOfflineOrderEntry`'s background sync is rewritten:
-  - Reads watermark from IDB.
-  - Calls `sync_products_lite_delta` (paginated by `updated_at`).
-  - Writes only changed rows; never `clear()` the store.
-  - Skips entirely if 0 changed rows.
-  - Runs only on `requestIdleCallback` and skips on `slow-2g`/`2g`/`saveData` connections.
-- Schemes & variants are NOT bulk-synced anymore. They're fetched per product by `get_product_details`. (When schemes/variants come back into use this still scales because we only fetch what the rep touches.)
-
-### 5. Pagination & virtualization
-
-- Grid mode: server-paginated (50 per page) using `search_products_for_order` with category + page params (or a small `list_products_lite` RPC). Today's client-side pagination over 20k stays only as a fallback when offline (paginating the lite store).
-- Table mode: keep the picker (already server-driven). Cart list is small and unaffected.
-- Add `react-window`-based virtualization to the grid view so only ~15 cards mount even on tablets.
-
-### 6. Make hot render paths O(cart), not O(catalog)
-
-In `OrderEntry.tsx`:
-
-- `getSelectionValue`, `getSelectionItemCount`, `getSelectionDetails` will iterate `cart` / `Object.keys(quantities)` instead of `products`. For grid mode, derive from `quantities` + a `productsById` Map populated only with touched products.
-- Voice/chat ordering's `products.find(...)` is replaced with a search call (`search_products_for_order`) plus `productsById` cache.
-- Memoize a `productsById` Map across renders; never reduce/forEach the full catalog.
-
-### 7. Slow-network resilience
-
-- All RPC calls (search, lite delta, details) get a 6 s timeout with fallback to `products_lite` for search and to cached details for product info.
-- Order placement path (`useOfflineOrderEntry.submitOrder` + `offlineOrderUtils.placeOrderWithOfflineSupport`) is **untouched** — offline order creation, queueing, and sync stay identical.
-- A "stale offline catalog" banner shows if `products_lite` watermark is older than 7 days.
-
-### 8. Database changes
-
-A single migration:
-
-- `CREATE INDEX IF NOT EXISTS idx_products_updated_at ON public.products(updated_at);`
-- `CREATE OR REPLACE FUNCTION public.sync_products_lite_delta(p_since timestamptz, p_limit int) RETURNS TABLE(...)` — SECURITY DEFINER, returns lite columns + category_name + search_keywords; respects RLS by being callable by `authenticated`.
-- `CREATE OR REPLACE FUNCTION public.get_product_details(p_id uuid) RETURNS jsonb` — bundles product + variants + schemes + price-list overrides + stock.
-- Both functions follow the project convention (`p_` prefix, `SET search_path = public`, explicit `GRANT EXECUTE ... TO authenticated, anon`).
-- Drops any older overloaded signatures explicitly.
-
-### 9. Files expected to change
-
-- `src/lib/offlineStorage.ts` — add `STORES.PRODUCTS_LITE` and a `meta` key for the watermark.
-- `src/hooks/useOfflineOrderEntry.ts` — rewrite to working-set model + delta sync; expose `getProductById`, `searchProducts`, `getRecentlyOrderedProducts`.
-- `src/hooks/useProductSearch.ts` — add an offline branch that queries `products_lite` (LIKE / token match) when offline or RPC times out; expose `getById` for cart hydration.
-- `src/hooks/useProductDetails.ts` — new, wraps `get_product_details`.
-- `src/utils/offlineOrderUtils.ts` — `fetchProductsWithOfflineSupport` becomes lite-aware; remove the full re-write path.
-- `src/utils/backgroundProductPrefetch.ts` — prefetch the lite catalog only.
-- `src/pages/OrderEntry.tsx` — cart-driven totals, `productsById` map, virtualized grid, paginated grid fetch. UI/visuals unchanged.
-- `src/components/order-entry/ProductPickerPopover.tsx` — minor: use `useProductDetails` when an option is picked.
-- `supabase/migrations/<new>.sql` — RPCs + index.
-
-### 10. Validation (after implementation)
-
-- `/order-entry` cold open: < 1.5 s on a normal connection, no `Loading products...` flash.
-- Console no longer shows the burst of `✅ Saved to products` on every open — only when there are real updates.
-- Network: 1 small lite-delta RPC + 1 RPC per debounced keystroke, plus 1 details RPC per product picked.
-- Offline (devtools "Offline"):
-  - Page opens, grid is paginated from `products_lite`.
-  - Search for `U`, `M`, `L`, `Z` returns matches instantly.
-  - Order placement still queues and syncs as before.
-- Voice/chat ordering still resolves products and adds them to cart (via `search_products_for_order` + `get_product_details`).
-- Schemes / UOM math unchanged — they always fetched per product anyway.
-
-### Out of scope
-
-- No change to the order placement / sync queue logic.
-- No change to schemes calculator, UOM engine, or invoice generation.
-- No UI redesign of Order Entry.
+## Validation
+- `/order-entry` opens < 1.5 s, no `Saved to products` console output, no IDB read for products.
+- Network tab shows a single `search_products_for_order` call ~300 ms after each keystroke.
+- `console.time('unit-render')` around `setSelectedProduct` and `console.timeEnd` inside `UnitSelect`'s render shows < 50 ms.
+- `get_product_details` fires after selection but UI does not flicker; second selection of the same product → no new RPC call.
+- DevTools airplane mode → banner shows, picker + Place Order disabled, cart preserved, no errors. Toggling back online auto-refetches.
+- Schemes, UOM conversion, voice/chat, table mode, grid mode all work; Customer Portal unaffected; no TS errors.
