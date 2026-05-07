@@ -140,7 +140,6 @@ function ProductPickerPopoverInner({
     setOpen(next);
     if (!next) {
       setInputValue("");
-      setDebouncedQuery("");
     }
   };
 
