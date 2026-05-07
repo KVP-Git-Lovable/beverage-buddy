@@ -89,6 +89,61 @@ export async function prefetchInitialProductSearch(category: string = 'all') {
   }
 }
 
+/**
+ * Direct, fast fallback against products + product_variants when the heavy
+ * RPC times out (the RPC joins UOM tables and can exceed statement timeout).
+ * Mirrors what the RPC returns for the dropdown's needs.
+ */
+async function directProductSearch(
+  term: string,
+  category: string,
+): Promise<ProductSearchResult[]> {
+  try {
+    let q = supabase
+      .from('products')
+      .select('id, sku, name, rate, unit, closing_stock, is_active, is_focused_product, category:product_categories(name), variants:product_variants(id, variant_name, sku, price, is_active, is_focused_product)')
+      .eq('is_active', true)
+      .limit(PAGE_SIZE);
+    if (term) {
+      const safe = term.replace(/[,()]/g, ' ');
+      q = q.or(`name.ilike.%${safe}%,sku.ilike.%${safe}%`);
+    }
+    if (category && category !== 'all') {
+      // category filter via joined name not supported in or(); skip — caller
+      // still receives matching products and the picker filters by category.
+    }
+    const { data, error } = await q;
+    if (error || !data) return [];
+    return (data as any[]).map((p) => ({
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      rate: Number(p.rate),
+      unit: p.unit,
+      closing_stock: p.closing_stock ?? null,
+      is_active: p.is_active ?? true,
+      category_name: p.category?.name ?? null,
+      is_focused_product: p.is_focused_product ?? null,
+      default_uom_code: p.unit ?? null,
+      allowed_uom_codes: p.unit ? [p.unit] : null,
+      variants: Array.isArray(p.variants)
+        ? p.variants
+            .filter((v: any) => v.is_active !== false)
+            .map((v: any) => ({
+              id: v.id,
+              variant_name: v.variant_name,
+              sku: v.sku,
+              price: Number(v.price),
+              is_active: v.is_active,
+              is_focused_product: v.is_focused_product,
+            }))
+        : [],
+    }));
+  } catch {
+    return [];
+  }
+}
+
 function offlineFilter(
   products: any[],
   term: string,
