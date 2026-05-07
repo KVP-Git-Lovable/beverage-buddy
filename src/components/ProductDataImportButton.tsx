@@ -39,6 +39,9 @@ type RowResult = {
 
 interface ImportRow {
   sku: string;
+  name: string;
+  rate_per_unit: number | null;
+  unit: string;
   base_category: string;
   physical_size: number | null;
   price_basis_unit_code: string;
@@ -49,23 +52,55 @@ interface ImportRow {
 
 const TEMPLATE_HEADERS = [
   'sku',
+  'name',
+  'rate_per_unit',
+  'unit',
+  'gst_percentage',
   'base_category',
   'physical_size',
   'price_basis_unit_code',
   'default_sales_unit_code',
   'default_purchase_unit_code',
-  'gst_percentage',
 ];
 
-const SAMPLE_ROW = {
-  sku: 'SKU-SAMPLE-001',
-  base_category: 'Weight',
-  physical_size: 250,
-  price_basis_unit_code: 'KG',
-  default_sales_unit_code: 'GRAM',
-  default_purchase_unit_code: 'KG',
-  gst_percentage: 18,
-};
+const SAMPLE_ROWS = [
+  {
+    sku: 'SKU-SAMPLE-001',
+    name: 'Sample Tea 250g',
+    rate_per_unit: 200,
+    unit: 'kg',
+    gst_percentage: 18,
+    base_category: 'Weight',
+    physical_size: 250,
+    price_basis_unit_code: 'KG',
+    default_sales_unit_code: 'GRAM',
+    default_purchase_unit_code: 'KG',
+  },
+  {
+    sku: 'SKU-SAMPLE-002',
+    name: 'Sample Juice 1L',
+    rate_per_unit: 120,
+    unit: 'litre',
+    gst_percentage: 12,
+    base_category: 'Volume',
+    physical_size: 1000,
+    price_basis_unit_code: 'LITRE',
+    default_sales_unit_code: 'ML',
+    default_purchase_unit_code: 'LITRE',
+  },
+  {
+    sku: 'SKU-SAMPLE-003',
+    name: 'Sample Soap Bar',
+    rate_per_unit: 35,
+    unit: 'piece',
+    gst_percentage: 18,
+    base_category: 'Quantity',
+    physical_size: '',
+    price_basis_unit_code: 'PIECE',
+    default_sales_unit_code: 'PIECE',
+    default_purchase_unit_code: 'PIECE',
+  },
+];
 
 const NORMALISED_CATEGORIES: Record<string, UomCategory> = {
   weight: 'Weight',
