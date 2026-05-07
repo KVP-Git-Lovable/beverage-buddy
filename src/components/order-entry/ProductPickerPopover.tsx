@@ -88,6 +88,9 @@ function ProductPickerPopoverInner({
           is_active: v.is_active !== false,
           is_focused_product: v.is_focused_product ?? false,
         })),
+        // Hint UOM codes from server row — used by UnitSelect for instant render
+        _default_uom_code: r.default_uom_code ?? null,
+        _allowed_uom_codes: r.allowed_uom_codes ?? null,
       };
     };
 
