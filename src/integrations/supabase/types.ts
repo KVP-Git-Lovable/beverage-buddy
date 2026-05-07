@@ -19679,6 +19679,7 @@ export type Database = {
           total_attempts: number
         }[]
       }
+      get_product_details: { Args: { p_id: string }; Returns: Json }
       get_product_revenue_performance: {
         Args: { end_date?: string; start_date?: string; user_full_name: string }
         Returns: {
@@ -20040,6 +20041,26 @@ export type Database = {
       sync_order_with_items: {
         Args: { p_items: Json; p_order: Json }
         Returns: Json
+      }
+      sync_products_lite_delta: {
+        Args: { p_limit?: number; p_since: string }
+        Returns: {
+          base_unit: string
+          brand: string
+          category_name: string
+          gst_percentage: number
+          hsn_code: string
+          id: string
+          is_active: boolean
+          is_focused_product: boolean
+          name: string
+          rate: number
+          search_keywords: string
+          sku: string
+          sku_image_url: string
+          unit: string
+          updated_at: string
+        }[]
       }
       to_base_qty: {
         Args: { p_product_id: string; p_qty: number; p_uom_code: string }

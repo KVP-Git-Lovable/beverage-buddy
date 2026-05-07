@@ -67,102 +67,91 @@ export function useOfflineOrderEntry() {
     };
   }, []);
 
-  // Background sync function - defined before fetchProducts
+  // Background DELTA sync — only fetches products changed since last sync.
+  // Uses sync_products_lite_delta RPC + mergeData (never clears the store).
+  // Schemes/variants are NOT bulk-synced; they are fetched lazily per product
+  // via get_product_details when actually needed.
   const syncProductsInBackground = async () => {
     try {
-      const PAGE_SIZE = 1000;
+      const WATERMARK_KEY = 'products_watermark';
+      const PAGE_SIZE = 2000;
 
-      // Fetch all products (paginated to bypass Supabase 1000-row default cap)
-      const productsData: any[] = [];
-      for (let from = 0; ; from += PAGE_SIZE) {
-        const { data: pageData, error: pageError } = await supabase
-          .from('products')
-          .select(`
-            *,
-            category:product_categories(name)
-          `)
-          .or('is_active.eq.true,is_active.is.null')
-          .order('name')
-          .range(from, from + PAGE_SIZE - 1);
+      // Read last watermark (max updated_at we've already pulled)
+      const meta = await offlineStorage.getSyncMetadata(WATERMARK_KEY);
+      let since = meta?.lastSyncedAt || '1970-01-01T00:00:00Z';
+      let totalChanged = 0;
+      let maxSeen = since;
 
-        if (pageError) throw pageError;
-        if (!pageData || pageData.length === 0) break;
-        productsData.push(...pageData);
-        if (pageData.length < PAGE_SIZE) break;
+      // Page through changes by ascending updated_at
+      // Loop until a page returns < PAGE_SIZE rows.
+      // Safety cap of 50 pages (= 100k rows) prevents runaway loops.
+      for (let page = 0; page < 50; page++) {
+        const { data, error } = await supabase.rpc('sync_products_lite_delta', {
+          p_since: since,
+          p_limit: PAGE_SIZE,
+        });
+        if (error) throw error;
+        const rows = (data as any[]) || [];
+        if (rows.length === 0) break;
+
+        // Map RPC shape -> cache shape used by the rest of the page
+        const mapped = rows.map((r: any) => ({
+          id: r.id,
+          sku: r.sku,
+          name: r.name,
+          brand: r.brand,
+          category: r.category_name ? { name: r.category_name } : null,
+          unit: r.unit,
+          base_unit: r.base_unit,
+          gst_percentage: r.gst_percentage,
+          rate: r.rate,
+          is_active: r.is_active,
+          is_focused_product: r.is_focused_product,
+          hsn_code: r.hsn_code,
+          sku_image_url: r.sku_image_url,
+          search_keywords: r.search_keywords,
+          updated_at: r.updated_at,
+          // schemes/variants are lazy — populated on demand via get_product_details
+          schemes: [],
+          variants: [],
+          closing_stock: 0,
+        }));
+
+        // Upsert (preserves existing items not in this delta)
+        await offlineStorage.mergeData(STORES.PRODUCTS, mapped);
+
+        const lastUpdatedAt = rows[rows.length - 1].updated_at;
+        if (lastUpdatedAt && lastUpdatedAt > maxSeen) maxSeen = lastUpdatedAt;
+        since = lastUpdatedAt;
+        totalChanged += rows.length;
+
+        if (rows.length < PAGE_SIZE) break;
       }
 
-      // Helper: paginated fetch for related tables
-      const fetchAllPaginated = async (table: 'product_schemes' | 'product_variants') => {
-        const all: any[] = [];
-        for (let from = 0; ; from += PAGE_SIZE) {
-          const { data, error } = await supabase
-            .from(table)
-            .select('*')
-            .or('is_active.eq.true,is_active.is.null')
-            .range(from, from + PAGE_SIZE - 1);
-          if (error) throw error;
-          if (!data || data.length === 0) break;
-          all.push(...data);
-          if (data.length < PAGE_SIZE) break;
-        }
-        return all;
-      };
+      // Persist new watermark only if we advanced
+      if (maxSeen && maxSeen !== meta?.lastSyncedAt) {
+        await offlineStorage.save(STORES.SYNC_METADATA, {
+          id: WATERMARK_KEY,
+          lastSyncedAt: maxSeen,
+          dataType: WATERMARK_KEY,
+        });
+      }
 
-      const [schemesData, variantsData] = await Promise.all([
-        fetchAllPaginated('product_schemes'),
-        fetchAllPaginated('product_variants'),
-      ]);
-
-      const enrichedProducts = (productsData || []).map((product: any) => ({
-        ...product,
-        schemes: (schemesData || []).filter((s: any) => s.product_id === product.id),
-        variants: (variantsData || []).filter((v: any) => v.product_id === product.id)
-      }));
-
-      setProducts(enrichedProducts);
+      // Refresh React state from the merged cache (filter inactive)
+      if (totalChanged > 0) {
+        const cachedProducts = await offlineStorage.getAll(STORES.PRODUCTS);
+        const activeProducts = (cachedProducts || []).filter(
+          (p: any) => p.is_active !== false,
+        );
+        setProducts(activeProducts as Product[]);
+      }
       setLoading(false);
 
-      // Cache for offline use - sequential chunked writes to avoid IDB transaction
-      // storms / OOM crashes when product catalog is large (e.g. 8k+ rows).
-      const chunkedSequentialSave = async (
-        store: string,
-        rows: any[],
-        chunkSize = 200,
-      ) => {
-        for (let i = 0; i < rows.length; i += chunkSize) {
-          const chunk = rows.slice(i, i + chunkSize);
-          // Sequential per-chunk; yield to the event loop between chunks
-          for (const row of chunk) {
-            try {
-              await offlineStorage.save(store, row);
-            } catch {
-              /* ignore individual row failures - cache is best-effort */
-            }
-          }
-          await new Promise((r) => setTimeout(r, 0));
-        }
-      };
-
-      // Run cache writes fully in the background, never block UI/state.
-      const runCacheWrites = async () => {
-        try {
-          await offlineStorage.clear(STORES.PRODUCTS);
-          await chunkedSequentialSave(STORES.PRODUCTS, enrichedProducts);
-          await offlineStorage.clear(STORES.VARIANTS);
-          await chunkedSequentialSave(STORES.VARIANTS, variantsData || []);
-          await offlineStorage.clear(STORES.SCHEMES);
-          await chunkedSequentialSave(STORES.SCHEMES, schemesData || []);
-        } catch (e) {
-          console.warn('Background product cache write failed:', e);
-        }
-      };
-      if (typeof (window as any).requestIdleCallback === 'function') {
-        (window as any).requestIdleCallback(() => { runCacheWrites(); });
+      if (totalChanged > 0) {
+        console.log(`✅ Delta-synced ${totalChanged} changed products (watermark → ${maxSeen})`);
       } else {
-        setTimeout(() => { runCacheWrites(); }, 250);
+        console.log('✅ Product catalog up to date (no delta)');
       }
-
-      console.log(`✅ Synced ${enrichedProducts.length} products from network (background)`);
     } catch (error) {
       console.error('Background sync error:', error);
     }
