@@ -1650,7 +1650,7 @@ export const OrderEntry = () => {
     // Add all items to cart
     items.forEach(item => {
       const baseProductId = item.id.split('_')[0];
-      const product = products.find(p => p.id === baseProductId);
+      const product = productsById.get(baseProductId);
 
       // Check if this is a variant or base product
       const isVariant = item.id.includes('_variant_');
@@ -1716,7 +1716,7 @@ export const OrderEntry = () => {
     const newCartItems: CartItem[] = [];
     items.forEach(item => {
       const baseProductId = item.id.split('_')[0];
-      const product = products.find(p => p.id === baseProductId);
+      const product = productsById.get(baseProductId);
 
       // Check if this is a variant or base product
       const isVariant = item.id.includes('_variant_');
@@ -2889,7 +2889,7 @@ export const OrderEntry = () => {
             count
           }) => {
             // Try to find product by ID first
-            let matchedProduct = products.find(p => p.id === productId);
+            let matchedProduct = productsById.get(productId);
 
             // If not found by ID, try to match by name (case-insensitive and partial match)
             if (!matchedProduct && productName) {
