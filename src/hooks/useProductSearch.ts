@@ -43,9 +43,14 @@ const DEBOUNCE_MS = 150;
 const PAGE_SIZE = 100; // dropdown shows up to 100 matches per query
 const LRU_MAX = 20;
 
+function normalizeCategory(category: string | null | undefined): string {
+  const normalized = (category || '').trim().toLowerCase();
+  return normalized === 'all' ? 'all' : (category || '').trim();
+}
+
 type CacheKey = string;
 const cache = new Map<CacheKey, ProductSearchResult[]>();
-const cacheKey = (term: string, category: string) => `${term.toLowerCase()}|${category}`;
+const cacheKey = (term: string, category: string) => `${term.toLowerCase()}|${normalizeCategory(category)}`;
 const cacheGet = (k: CacheKey) => {
   if (!cache.has(k)) return undefined;
   const v = cache.get(k)!;
@@ -71,10 +76,11 @@ export async function prefetchInitialProductSearch(category: string = 'all') {
   const k = cacheKey('', category);
   if (cacheGet(k)) return;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  const normalizedCategory = normalizeCategory(category);
   try {
     const { data, error } = await supabase.rpc('search_products_for_order', {
       p_query: '',
-      p_category: category && category !== 'all' ? category : null,
+      p_category: normalizedCategory && normalizedCategory !== 'all' ? normalizedCategory : null,
       p_limit: PAGE_SIZE,
     });
     if (!error && data) cacheSet(k, data as unknown as ProductSearchResult[]);
@@ -89,9 +95,10 @@ function offlineFilter(
   category: string
 ): ProductSearchResult[] {
   const t = term.toLowerCase();
+  const normalizedCategory = normalizeCategory(category);
   const filtered = products
     .filter((p) => p.is_active !== false)
-    .filter((p) => category === 'all' || p?.category?.name === category)
+    .filter((p) => normalizedCategory === 'all' || p?.category?.name === normalizedCategory)
     .filter((p) => {
       if (!t) return true;
       if (p.name?.toLowerCase().includes(t)) return true;
@@ -147,6 +154,7 @@ export function useProductSearch(
   const reqIdRef = useRef(0);
 
   const term = (searchTerm || '').trim();
+  const normalizedCategory = normalizeCategory(selectedCategory);
   const needsMoreChars = term.length > 0 && term.length < MIN_CHARS;
 
   // Keep latest offline list in a ref so it does NOT retrigger the search
@@ -165,7 +173,7 @@ export function useProductSearch(
       return;
     }
 
-    const key = cacheKey(term, selectedCategory);
+    const key = cacheKey(term, normalizedCategory);
     const cached = cacheGet(key);
     if (cached) {
       setResults(cached);
@@ -174,7 +182,7 @@ export function useProductSearch(
     }
 
     // Show offline matches immediately while waiting on the server
-    const localPreview = offlineFilter(offlineRef.current, term, selectedCategory);
+    const localPreview = offlineFilter(offlineRef.current, term, normalizedCategory);
     if (localPreview.length > 0) setResults(localPreview);
     else if (term.length === 0) setResults([]);
 
@@ -196,7 +204,7 @@ export function useProductSearch(
           const { data, error } = await supabase.rpc('search_products_for_order', {
             p_query: term,
             p_category:
-              selectedCategory && selectedCategory !== 'all' ? selectedCategory : null,
+              normalizedCategory && normalizedCategory !== 'all' ? normalizedCategory : null,
             p_limit: PAGE_SIZE,
           });
 
@@ -222,7 +230,7 @@ export function useProductSearch(
     );
 
     return () => clearTimeout(handle);
-  }, [term, selectedCategory]);
+  }, [term, normalizedCategory]);
 
   return { results, isSearching, needsMoreChars };
 }
