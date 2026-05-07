@@ -39,7 +39,7 @@ export interface ProductSearchResult {
 }
 
 const MIN_CHARS = 2;
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 150;
 const PAGE_SIZE = 100; // dropdown shows up to 100 matches per query
 const LRU_MAX = 20;
 
