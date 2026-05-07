@@ -152,7 +152,7 @@ export const ProductDataImportButton = ({ onImported }: Props) => {
       const { data, error } = await supabase
         .from('products')
         .select(
-          'sku, base_unit_category, net_weight_g, net_volume_ml, gst_percentage, price_basis_uom:price_basis_uom_id(code), default_sales_uom:default_sales_uom_id(code), default_purchase_uom:default_purchase_uom_id(code)'
+          'sku, name, rate, unit, base_unit_category, net_weight_g, net_volume_ml, gst_percentage, price_basis_uom:price_basis_uom_id(code), default_sales_uom:default_sales_uom_id(code), default_purchase_uom:default_purchase_uom_id(code)'
         )
         .not('sku', 'is', null)
         .neq('sku', '')
@@ -169,23 +169,30 @@ export const ProductDataImportButton = ({ onImported }: Props) => {
               : '';
         return {
           sku: p.sku,
+          name: p.name ?? '',
+          rate_per_unit: p.rate ?? '',
+          unit: p.unit ?? '',
+          gst_percentage: p.gst_percentage ?? '',
           base_category: cat,
           physical_size: physical,
           price_basis_unit_code: p.price_basis_uom?.code ?? '',
           default_sales_unit_code: p.default_sales_uom?.code ?? '',
           default_purchase_unit_code: p.default_purchase_uom?.code ?? '',
-          gst_percentage: p.gst_percentage ?? '',
         };
       });
     } catch (err) {
       console.warn('[ProductDataImport] could not load sample SKUs, using placeholder', err);
     }
-    if (sampleRows.length === 0) sampleRows = [SAMPLE_ROW];
+    if (sampleRows.length === 0) sampleRows = SAMPLE_ROWS as Array<Record<string, unknown>>;
     const ws = XLSX.utils.json_to_sheet(sampleRows, { header: TEMPLATE_HEADERS });
     // Add a small notes sheet so users know the rules.
     const notes = XLSX.utils.aoa_to_sheet([
       ['Field', 'Rules'],
       ['sku', 'Must match an existing product SKU exactly (case-sensitive).'],
+      ['name', 'Product display name. Updated on the matched product if provided.'],
+      ['rate_per_unit', 'Selling rate as a number, expressed per the unit column (e.g. 200).'],
+      ['unit', 'Free-text display unit shown on the product (e.g. kg, litre, piece).'],
+      ['gst_percentage', 'GST rate as a number (e.g. 5, 12, 18, 28). Leave blank to skip.'],
       ['base_category', 'One of: Weight, Volume, Quantity'],
       [
         'physical_size',
@@ -203,7 +210,6 @@ export const ProductDataImportButton = ({ onImported }: Props) => {
         'default_purchase_unit_code',
         'UOM code used for GRN/purchase entry. Defaults to the sales unit if blank.',
       ],
-      ['gst_percentage', 'GST rate as a number (e.g. 5, 12, 18, 28). Leave blank to skip.'],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Products');
