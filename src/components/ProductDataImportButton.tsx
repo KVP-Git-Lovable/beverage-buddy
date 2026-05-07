@@ -231,6 +231,12 @@ export const ProductDataImportButton = ({ onImported }: Props) => {
           const rows: ImportRow[] = raw
             .map((r) => ({
               sku: String(r['sku'] ?? '').trim(),
+              name: String(r['name'] ?? '').trim(),
+              rate_per_unit:
+                r['rate_per_unit'] === '' || r['rate_per_unit'] == null
+                  ? null
+                  : Number(r['rate_per_unit']),
+              unit: String(r['unit'] ?? '').trim(),
               base_category: String(r['base_category'] ?? '').trim(),
               physical_size:
                 r['physical_size'] === '' || r['physical_size'] == null
