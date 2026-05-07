@@ -262,6 +262,10 @@ export const OrderEntry = () => {
     // Prefetch UOM mappings for ALL products in one RPC so the per-line
     // Unit dropdown is populated instantly when a product is selected.
     void prefetchAllProductUnits();
+    // Warm the empty-query product search cache so the first time a user
+    // opens the product picker the dropdown shows results instantly
+    // (mirrors the Customer Portal pattern).
+    void prefetchInitialProductSearch('all');
   }, []);
 
   // Reset auto-expand flag whenever category changes
