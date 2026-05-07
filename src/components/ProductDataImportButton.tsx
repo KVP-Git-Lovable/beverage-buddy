@@ -522,8 +522,8 @@ export const ProductDataImportButton = ({ onImported }: Props) => {
           <DialogHeader>
             <DialogTitle>Import Product Data</DialogTitle>
             <DialogDescription>
-              Bulk-update Base Unit Setup fields and GST% for existing products. Rows are
-              matched to products by <span className="font-mono">sku</span>.
+              Bulk-import products. Rows are matched by <span className="font-mono">sku</span>:
+              existing SKUs are updated, new SKUs are created.
             </DialogDescription>
           </DialogHeader>
 
