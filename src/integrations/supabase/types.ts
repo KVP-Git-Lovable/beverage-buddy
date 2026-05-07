@@ -19996,10 +19996,17 @@ export type Database = {
         Returns: Json
       }
       search_products_for_order: {
-        Args: { p_category?: string; p_limit?: number; p_query: string }
+        Args: {
+          p_category?: string
+          p_is_focused?: boolean
+          p_limit?: number
+          p_query: string
+        }
         Returns: {
+          allowed_uom_codes: string[]
           category_name: string
           closing_stock: number
+          default_uom_code: string
           id: string
           is_active: boolean
           is_focused_product: boolean
