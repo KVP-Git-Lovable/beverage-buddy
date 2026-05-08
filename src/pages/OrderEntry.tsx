@@ -2461,6 +2461,8 @@ export const OrderEntry = () => {
                                 productId={product.id}
                                 baseRate={product.rate}
                                 selectedUnitCode={selectedUnits[product.id]}
+                                hintDefaultCode={(product as any)?._default_uom_code ?? undefined}
+                                hintAllowedCodes={(product as any)?._allowed_uom_codes ?? undefined}
                               />
                             </div>
                             <div>
@@ -2471,6 +2473,8 @@ export const OrderEntry = () => {
                                 onChange={(value) =>
                                   setSelectedUnits(prev => ({ ...prev, [product.id]: value }))
                                 }
+                                hintDefaultCode={(product as any)?._default_uom_code ?? undefined}
+                                hintAllowedCodes={(product as any)?._allowed_uom_codes ?? undefined}
                               />
                             </div>
                             <div>
@@ -2534,6 +2538,8 @@ export const OrderEntry = () => {
                                        productId={product.id}
                                        baseRate={variantPrice}
                                        selectedUnitCode={selectedUnits[variantCompositeId]}
+                                       hintDefaultCode={(product as any)?._default_uom_code ?? undefined}
+                                       hintAllowedCodes={(product as any)?._allowed_uom_codes ?? undefined}
                                      />
                                    </div>
                                    <div>
@@ -2544,6 +2550,8 @@ export const OrderEntry = () => {
                                        onChange={(value) =>
                                          setSelectedUnits(prev => ({ ...prev, [variantCompositeId]: value }))
                                        }
+                                       hintDefaultCode={(product as any)?._default_uom_code ?? undefined}
+                                       hintAllowedCodes={(product as any)?._allowed_uom_codes ?? undefined}
                                      />
                                    </div>
                                  <div>
