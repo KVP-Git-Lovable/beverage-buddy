@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as _supabase } from '@/integrations/supabase/client';
+const supabase: any = _supabase;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,7 +71,7 @@ const GoodsReceipt = () => {
 
   const loadOrderDetails = async () => {
     try {
-      const { data: orderData, error: orderError } = await supabase
+      const { data: orderData, error: orderError } = await (supabase as any)
         .from('primary_orders')
         .select('*')
         .eq('id', orderId)
@@ -78,7 +79,7 @@ const GoodsReceipt = () => {
 
       if (orderError) throw orderError;
 
-      const { data: itemsData, error: itemsError } = await supabase
+      const { data: itemsData, error: itemsError } = await (supabase as any)
         .from('primary_order_items')
         .select('*')
         .eq('order_id', orderId);
@@ -167,7 +168,7 @@ const GoodsReceipt = () => {
 
       // 1. Update order items with received quantities
       for (const item of items) {
-        await supabase
+        await (supabase as any)
           .from('primary_order_items')
           .update({ 
             received_quantity: item.received_quantity,
@@ -241,7 +242,7 @@ const GoodsReceipt = () => {
         newStatus = 'partially_delivered';
       }
 
-      await supabase
+      await (supabase as any)
         .from('primary_orders')
         .update({ 
           status: newStatus,

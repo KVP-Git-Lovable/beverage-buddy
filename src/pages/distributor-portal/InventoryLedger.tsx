@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as _supabase } from '@/integrations/supabase/client';
+const supabase: any = _supabase;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -81,7 +82,7 @@ const InventoryLedger = () => {
       setLoading(true);
 
       // Load transactions
-      const { data: txData, error } = await supabase
+      const { data: txData, error } = await (supabase as any)
         .from('distributor_inventory_transactions')
         .select('*')
         .eq('distributor_id', distributorId)
@@ -96,7 +97,7 @@ const InventoryLedger = () => {
       let productMap = new Map<string, string>();
       
       if (productIds.length > 0) {
-        const { data: productsData } = await supabase
+        const { data: productsData } = await (supabase as any)
           .from('products')
           .select('id, name')
           .in('id', productIds);
@@ -109,7 +110,7 @@ const InventoryLedger = () => {
       })) || []);
 
       // Load all products for filter
-      const { data: allProducts } = await supabase
+      const { data: allProducts } = await (supabase as any)
         .from('products')
         .select('id, name')
         .eq('is_active', true)

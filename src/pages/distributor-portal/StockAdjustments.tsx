@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as _supabase } from '@/integrations/supabase/client';
+const supabase: any = _supabase;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,7 +90,7 @@ const StockAdjustments = () => {
   const loadData = async () => {
     try {
       // Load inventory
-      const { data: invData } = await supabase
+      const { data: invData } = await (supabase as any)
         .from('distributor_inventory')
         .select('*')
         .eq('distributor_id', distributorId)
@@ -98,7 +99,7 @@ const StockAdjustments = () => {
       setInventory(invData || []);
 
       // Load recent adjustments from transactions
-      const { data: txData } = await supabase
+      const { data: txData } = await (supabase as any)
         .from('distributor_inventory_transactions')
         .select('*')
         .eq('distributor_id', distributorId)
@@ -110,7 +111,7 @@ const StockAdjustments = () => {
       const productIds = [...new Set(txData?.map(t => t.product_id) || [])];
       let productMap = new Map<string, string>();
       if (productIds.length > 0) {
-        const { data: products } = await supabase
+        const { data: products } = await (supabase as any)
           .from('products')
           .select('id, name')
           .in('id', productIds);
@@ -175,7 +176,7 @@ const StockAdjustments = () => {
       const newValue = newQty * (inv.unit_cost || 0);
 
       // Update inventory
-      await supabase
+      await (supabase as any)
         .from('distributor_inventory')
         .update({
           quantity: newQty,
@@ -184,7 +185,7 @@ const StockAdjustments = () => {
         .eq('id', adjustment.inventory_id);
 
       // Log transaction
-      await supabase
+      await (supabase as any)
         .from('distributor_inventory_transactions')
         .insert({
           distributor_id: distributorId,

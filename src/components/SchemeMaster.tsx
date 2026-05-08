@@ -372,7 +372,7 @@ export const SchemeMaster = () => {
           include_children: rule.includeChildren
         }));
         
-        await supabase.from('scheme_applicability').insert(rulesToInsert);
+        await supabase.from('scheme_applicability').insert(rulesToInsert as any);
       } else if (schemeId && schemeForm.applicability_type === 'global') {
         // Clear rules if global
         await supabase.from('scheme_applicability').delete().eq('scheme_id', schemeId);

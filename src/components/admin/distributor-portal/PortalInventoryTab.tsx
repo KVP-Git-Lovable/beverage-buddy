@@ -69,7 +69,7 @@ export const PortalInventoryTab = ({ searchQuery }: PortalInventoryTabProps) => 
         distributor_name: distributorData?.find(d => d.id === item.distributor_id)?.name || 'Unknown'
       }));
 
-      setInventory(inventoryWithDistributors);
+      setInventory(inventoryWithDistributors as any);
     } catch (error) {
       console.error('Error loading inventory:', error);
       toast.error('Failed to load inventory');

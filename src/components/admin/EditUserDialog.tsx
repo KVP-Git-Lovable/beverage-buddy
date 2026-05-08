@@ -249,7 +249,7 @@ const EditUserDialog: React.FC<EditUserDialogProps> = ({ user, open, onOpenChang
       
       const { error: profileError } = await supabase
         .from('profiles')
-        .update(profileUpdate)
+        .update(profileUpdate as any)
         .eq('id', user.id);
 
       if (profileError) throw profileError;

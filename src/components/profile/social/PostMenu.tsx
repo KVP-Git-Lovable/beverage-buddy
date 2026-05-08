@@ -120,7 +120,7 @@ export function PostMenu({ postId, postContent, isOwner, currentUserId, onPostUp
           user_id: currentUserId,
           content: `📢 Shared: ${postContent}`,
           shared_from_post_id: postId,
-        });
+        } as any);
 
       if (error) throw error;
 

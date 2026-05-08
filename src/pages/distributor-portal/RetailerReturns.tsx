@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as _supabase } from '@/integrations/supabase/client';
+const supabase: any = _supabase;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -124,7 +125,7 @@ const RetailerReturns = () => {
   const loadData = async () => {
     try {
       // Load returns
-      const { data: returnsData } = await supabase
+      const { data: returnsData } = await (supabase as any)
         .from('distributor_returns')
         .select('*')
         .eq('distributor_id', distributorId)
@@ -134,7 +135,7 @@ const RetailerReturns = () => {
       const retailerIds = [...new Set(returnsData?.map(r => r.retailer_id) || [])];
       let retailerMap = new Map<string, string>();
       if (retailerIds.length > 0) {
-        const { data: retailersData } = await supabase
+        const { data: retailersData } = await (supabase as any)
           .from('retailers')
           .select('id, name')
           .in('id', retailerIds);
@@ -147,14 +148,14 @@ const RetailerReturns = () => {
       })) || []);
 
       // Load retailers for dropdown
-      const { data: allRetailers } = await supabase
+      const { data: allRetailers } = await (supabase as any)
         .from('retailers')
         .select('id, name, address')
         .order('name');
       setRetailers(allRetailers || []);
 
       // Load products
-      const { data: productsData } = await supabase
+      const { data: productsData } = await (supabase as any)
         .from('products')
         .select('id, name, unit')
         .eq('is_active', true)
@@ -227,7 +228,7 @@ const RetailerReturns = () => {
       const retailer = retailers.find(r => r.id === newReturn.retailer_id);
 
       // Create return header
-      const { data: returnData, error: returnError } = await supabase
+      const { data: returnData, error: returnError } = await (supabase as any)
         .from('distributor_returns')
         .insert({
           distributor_id: distributorId,
@@ -260,13 +261,13 @@ const RetailerReturns = () => {
         notes: item.notes || null,
       }));
 
-      await supabase
+      await (supabase as any)
         .from('distributor_return_items')
         .insert(itemsToInsert);
 
       // Log transaction
       for (const item of newReturn.items) {
-        await supabase
+        await (supabase as any)
           .from('distributor_inventory_transactions')
           .insert({
             distributor_id: distributorId,
@@ -303,7 +304,7 @@ const RetailerReturns = () => {
     setSaving(true);
     try {
       // Get return items
-      const { data: items } = await supabase
+      const { data: items } = await (supabase as any)
         .from('distributor_return_items')
         .select('*')
         .eq('return_id', selectedReturn.id);
@@ -313,7 +314,7 @@ const RetailerReturns = () => {
         for (const item of items) {
           if (item.condition === 'good') {
             // Check existing inventory
-            const { data: existingInv } = await supabase
+            const { data: existingInv } = await (supabase as any)
               .from('distributor_inventory')
               .select('*')
               .eq('distributor_id', distributorId)
@@ -321,7 +322,7 @@ const RetailerReturns = () => {
               .maybeSingle();
 
             if (existingInv) {
-              await supabase
+              await (supabase as any)
                 .from('distributor_inventory')
                 .update({
                   quantity: existingInv.quantity + item.quantity,
@@ -329,7 +330,7 @@ const RetailerReturns = () => {
                 })
                 .eq('id', existingInv.id);
             } else {
-              await supabase
+              await (supabase as any)
                 .from('distributor_inventory')
                 .insert({
                   distributor_id: distributorId,
@@ -346,7 +347,7 @@ const RetailerReturns = () => {
             }
 
             // Mark item as added to stock
-            await supabase
+            await (supabase as any)
               .from('distributor_return_items')
               .update({ added_to_stock: true })
               .eq('id', item.id);
@@ -355,7 +356,7 @@ const RetailerReturns = () => {
       }
 
       // Update return status
-      await supabase
+      await (supabase as any)
         .from('distributor_returns')
         .update({
           status: addToStock ? 'added_to_stock' : 'verified',

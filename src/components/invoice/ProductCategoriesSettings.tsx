@@ -143,13 +143,13 @@ export default function ProductCategoriesSettings() {
       if (existingId) {
         const { error } = await supabase
           .from('company_product_categories')
-          .update({ categories_json: jsonData as unknown as Record<string, unknown> })
+          .update({ categories_json: jsonData as any })
           .eq('id', existingId);
         if (error) throw error;
       } else {
         const { data, error } = await supabase
           .from('company_product_categories')
-          .insert({ company_id: companyId, categories_json: jsonData as unknown as Record<string, unknown> })
+          .insert({ company_id: companyId, categories_json: jsonData as any } as any)
           .select('id')
           .single();
         if (error) throw error;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as _supabase } from '@/integrations/supabase/client';
+const supabase: any = _supabase;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +33,7 @@ const PriceBookView = () => {
   const loadPriceBook = async () => {
     try {
       // Get distributor's assigned price book
-      const { data: assignment } = await supabase
+      const { data: assignment } = await (supabase as any)
         .from('distributor_price_books')
         .select('price_book_id')
         .eq('distributor_id', distributorId!)
@@ -41,14 +42,14 @@ const PriceBookView = () => {
 
       if (!assignment) {
         // Try to find price book by distributor category
-        const { data: distributor } = await supabase
+        const { data: distributor } = await (supabase as any)
           .from('distributors')
           .select('distributor_category')
           .eq('id', distributorId!)
           .single();
 
         if (distributor?.distributor_category) {
-          const { data: categoryPB } = await supabase
+          const { data: categoryPB } = await (supabase as any)
             .from('price_books')
             .select('id, name')
             .eq('distributor_category', distributor.distributor_category)
@@ -63,7 +64,7 @@ const PriceBookView = () => {
         }
 
         // Fall back to standard price book
-        const { data: standardPB } = await supabase
+        const { data: standardPB } = await (supabase as any)
           .from('price_books')
           .select('id, name')
           .eq('is_standard', true)
@@ -79,7 +80,7 @@ const PriceBookView = () => {
       }
 
       // Load assigned price book
-      const { data: pb } = await supabase
+      const { data: pb } = await (supabase as any)
         .from('price_books')
         .select('id, name')
         .eq('id', assignment.price_book_id)
@@ -96,7 +97,7 @@ const PriceBookView = () => {
   const loadEntries = async (priceBookId: string, name: string) => {
     setPriceBookName(name);
     
-    const { data: entriesData } = await supabase
+    const { data: entriesData } = await (supabase as any)
       .from('price_book_entries')
       .select('*')
       .eq('price_book_id', priceBookId)
@@ -107,7 +108,7 @@ const PriceBookView = () => {
 
     // Get product names
     const productIds = [...new Set(entriesData.map(e => e.product_id))];
-    const { data: products } = await supabase
+    const { data: products } = await (supabase as any)
       .from('products')
       .select('id, name')
       .in('id', productIds);
@@ -118,7 +119,7 @@ const PriceBookView = () => {
     const variantIds = entriesData.filter(e => e.variant_id).map(e => e.variant_id!);
     let variantMap = new Map<string, string>();
     if (variantIds.length > 0) {
-      const { data: variants } = await supabase
+      const { data: variants } = await (supabase as any)
         .from('product_variants')
         .select('id, variant_name')
         .in('id', variantIds);

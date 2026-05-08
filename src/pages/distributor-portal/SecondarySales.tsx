@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as _supabase } from '@/integrations/supabase/client';
+const supabase: any = _supabase;
 import { getDisplayValues } from '@/utils/unitDisplayUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -144,7 +145,7 @@ const SecondarySales = () => {
       setLoading(true);
       
       // Get distributor name for matching
-      const { data: distData } = await supabase
+      const { data: distData } = await (supabase as any)
         .from('distributors')
         .select('id, name')
         .eq('id', distributorId)
@@ -157,7 +158,7 @@ const SecondarySales = () => {
       const retailerMap = new Map<string, any>();
       
       // From distributor_retailer_mappings
-      const { data: mappedRetailers } = await supabase
+      const { data: mappedRetailers } = await (supabase as any)
         .from('distributor_retailer_mappings')
         .select('retailer_id')
         .eq('distributor_id', distributorId);
@@ -165,7 +166,7 @@ const SecondarySales = () => {
       mappedRetailers?.forEach(r => retailerIdSet.add(r.retailer_id));
       
       // From retailers table via separate typed queries
-      const { data: linkedRetailersByDistributor } = await supabase
+      const { data: linkedRetailersByDistributor } = await (supabase as any)
         .from('retailers')
         .select('id, name, address, phone, beat_name, beat_id')
         .eq('distributor_id', distributorId);
@@ -176,7 +177,7 @@ const SecondarySales = () => {
       });
 
       if (distributorName) {
-        const { data: linkedRetailersByParentName } = await supabase
+        const { data: linkedRetailersByParentName } = await (supabase as any)
           .from('retailers')
           .select('id, name, address, phone, beat_name, beat_id')
           .ilike('parent_name', distributorName);
@@ -198,7 +199,7 @@ const SecondarySales = () => {
       // Fetch retailer details for IDs from mappings that weren't in linkedRetailers
       const missingIds = retailerIds.filter(id => !retailerMap.has(id));
       if (missingIds.length > 0) {
-        const { data: missingRetailers } = await supabase
+        const { data: missingRetailers } = await (supabase as any)
           .from('retailers')
           .select('id, name, address, phone, beat_name, beat_id')
           .in('id', missingIds);
@@ -217,7 +218,7 @@ const SecondarySales = () => {
       let allOrders: any[] = [];
       
       // Orders directly linked to this distributor
-      const { data: directOrders } = await supabase
+      const { data: directOrders } = await (supabase as any)
         .from('orders')
         .select('*')
         .eq('distributor_id', distributorId)
@@ -228,7 +229,7 @@ const SecondarySales = () => {
 
       // Also get orders from linked retailers (regardless of distributor_id on order)
       if (retailerIds.length > 0) {
-        const { data: retailerOrders, error } = await supabase
+        const { data: retailerOrders, error } = await (supabase as any)
           .from('orders')
           .select('*')
           .in('retailer_id', retailerIds)
@@ -249,7 +250,7 @@ const SecondarySales = () => {
       // Fetch order items for all orders
       if (allOrders.length > 0) {
         const orderIds = allOrders.map(o => o.id);
-        const { data: itemsData } = await supabase
+        const { data: itemsData } = await (supabase as any)
           .from('order_items')
           .select('*')
           .in('order_id', orderIds);
@@ -458,7 +459,7 @@ const SecondarySales = () => {
 
   // Check if a ledger entry already exists for an order
   const checkLedgerExists = async (orderId: string): Promise<boolean> => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from('distributor_inventory_transactions')
       .select('id')
       .eq('reference_id', orderId)
@@ -489,7 +490,7 @@ const SecondarySales = () => {
       
       // Step 1: Find inventory - prefer product_id, fallback to name
       if (item.product_id) {
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from('distributor_inventory')
           .select('*')
           .eq('distributor_id', distributorId)
@@ -500,7 +501,7 @@ const SecondarySales = () => {
       
       // Fallback to product name matching
       if (!inventoryItem) {
-        const { data } = await supabase
+        const { data } = await (supabase as any)
           .from('distributor_inventory')
           .select('*')
           .eq('distributor_id', distributorId)
@@ -531,7 +532,7 @@ const SecondarySales = () => {
 
       // Step 4: Update inventory (skip if backfilling)
       if (!skipInventoryDeduction) {
-        const { error: updateError } = await supabase
+        const { error: updateError } = await (supabase as any)
           .from('distributor_inventory')
           .update({
             quantity: stockAfter,
@@ -547,7 +548,7 @@ const SecondarySales = () => {
       }
 
       // Step 5: Create transaction/ledger entry for audit trail
-      const { error: txError } = await supabase
+      const { error: txError } = await (supabase as any)
         .from('distributor_inventory_transactions')
         .insert({
           distributor_id: distributorId,
@@ -624,7 +625,7 @@ const SecondarySales = () => {
         updates.credit_paid_amount = parseFloat(amountCollected) || 0;
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('orders')
         .update(updates)
         .eq('id', selectedOrder.id);

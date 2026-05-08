@@ -406,7 +406,7 @@ export function useOfflineSync() {
               throw rpcError;
             }
             
-            actualOrderId = rpcResult?.order_id || offlineOrderId;
+            actualOrderId = (rpcResult as any)?.order_id || offlineOrderId;
             console.log('✅ Order + items synced via RPC:', rpcResult);
           } catch (rpcFallbackError: any) {
             // FALLBACK: Direct insert if RPC not available
@@ -953,7 +953,7 @@ export function useOfflineSync() {
             no_order_reason: data.reason,
             notes: data.notes,
             visit_date: data.visit_date
-          })
+          } as any)
           .eq('id', data.visit_id);
         if (noOrderError) throw noOrderError;
         break;

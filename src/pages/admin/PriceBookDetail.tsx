@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as _supabase } from '@/integrations/supabase/client';
+const supabase: any = _supabase;
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -233,7 +234,7 @@ const PriceBookDetail = () => {
         updateData.final_price = finalPrice;
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('price_book_entries')
         .update(updateData)
         .eq('id', entry.id);
@@ -249,7 +250,7 @@ const PriceBookDetail = () => {
 
   const handleDeleteEntry = async (entryId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('price_book_entries')
         .delete()
         .eq('id', entryId);

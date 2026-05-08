@@ -131,7 +131,7 @@ export const useHierarchyTargets = (fyYear?: number) => {
     mutationFn: async ({ id, ...updates }: Partial<HierarchyTarget> & { id: string }) => {
       const { data, error } = await supabase
         .from('hierarchy_targets')
-        .update(updates)
+        .update(updates as any)
         .eq('id', id)
         .select()
         .single();

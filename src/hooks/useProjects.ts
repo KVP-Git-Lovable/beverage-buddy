@@ -185,7 +185,7 @@ export function useUpdateProject() {
     mutationFn: async ({ id, ...values }: Partial<Project> & { id: string }) => {
       const { data, error } = await supabase
         .from('pm_projects')
-        .update(values)
+        .update(values as any)
         .eq('id', id)
         .select()
         .single();
@@ -266,7 +266,7 @@ export function useUpdateTask() {
     mutationFn: async ({ id, ...values }: Partial<Task> & { id: string }) => {
       const { data, error } = await supabase
         .from('pm_tasks')
-        .update(values)
+        .update(values as any)
         .eq('id', id)
         .select()
         .single();
