@@ -70,7 +70,7 @@ const GoodsReceipt = () => {
 
   const loadOrderDetails = async () => {
     try {
-      const { data: orderData, error: orderError } = await supabase
+      const { data: orderData, error: orderError } = await (supabase as any)
         .from('primary_orders')
         .select('*')
         .eq('id', orderId)
@@ -78,7 +78,7 @@ const GoodsReceipt = () => {
 
       if (orderError) throw orderError;
 
-      const { data: itemsData, error: itemsError } = await supabase
+      const { data: itemsData, error: itemsError } = await (supabase as any)
         .from('primary_order_items')
         .select('*')
         .eq('order_id', orderId);
@@ -167,7 +167,7 @@ const GoodsReceipt = () => {
 
       // 1. Update order items with received quantities
       for (const item of items) {
-        await supabase
+        await (supabase as any)
           .from('primary_order_items')
           .update({ 
             received_quantity: item.received_quantity,
@@ -241,7 +241,7 @@ const GoodsReceipt = () => {
         newStatus = 'partially_delivered';
       }
 
-      await supabase
+      await (supabase as any)
         .from('primary_orders')
         .update({ 
           status: newStatus,

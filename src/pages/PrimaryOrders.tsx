@@ -95,7 +95,7 @@ const PrimaryOrders = () => {
 
   const loadOrders = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('primary_orders')
         .select(`
           *,
@@ -117,7 +117,7 @@ const PrimaryOrders = () => {
   const loadOrderItems = async (orderId: string) => {
     setLoadingItems(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('primary_order_items')
         .select('*')
         .eq('order_id', orderId);
@@ -140,7 +140,7 @@ const PrimaryOrders = () => {
   const updateDistributorInventory = async (orderId: string, distributorId: string) => {
     try {
       // Fetch order items
-      const { data: orderItems, error: itemsError } = await supabase
+      const { data: orderItems, error: itemsError } = await (supabase as any)
         .from('primary_order_items')
         .select('*')
         .eq('order_id', orderId);
@@ -149,7 +149,7 @@ const PrimaryOrders = () => {
       if (!orderItems || orderItems.length === 0) return;
 
       // Fetch order details for reference
-      const { data: orderData, error: orderError } = await supabase
+      const { data: orderData, error: orderError } = await (supabase as any)
         .from('primary_orders')
         .select('order_number')
         .eq('id', orderId)
@@ -169,7 +169,7 @@ const PrimaryOrders = () => {
         if (receivedQty <= 0) continue;
 
         // Build query with proper null handling for variant_id
-        let inventoryQuery = supabase
+        let inventoryQuery = (supabase as any)
           .from('distributor_inventory')
           .select('*')
           .eq('distributor_id', distributorId)
@@ -187,7 +187,7 @@ const PrimaryOrders = () => {
         if (existingError) throw existingError;
 
         if (existingInventory) {
-          const { error: updateError } = await supabase
+          const { error: updateError } = await (supabase as any)
             .from('distributor_inventory')
             .update({
               quantity: (existingInventory.quantity || 0) + receivedQty,
@@ -201,7 +201,7 @@ const PrimaryOrders = () => {
 
           if (updateError) throw updateError;
         } else {
-          const { error: insertError } = await supabase
+          const { error: insertError } = await (supabase as any)
             .from('distributor_inventory')
             .insert({
               distributor_id: distributorId,
@@ -224,7 +224,7 @@ const PrimaryOrders = () => {
           if (insertError) throw insertError;
         }
 
-        const { error: txnError } = await supabase
+        const { error: txnError } = await (supabase as any)
           .from('distributor_inventory_transactions')
           .insert({
             distributor_id: distributorId,
@@ -266,7 +266,7 @@ const PrimaryOrders = () => {
       const order = orders.find(o => o.id === orderId) || selectedOrder;
       const distributorId = order?.distributor_id;
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('primary_orders')
         .update(updateData)
         .eq('id', orderId);
@@ -301,7 +301,7 @@ const PrimaryOrders = () => {
 
   const checkInventorySynced = async (orderId: string, distributorId: string) => {
     // Check if transaction logs exist
-    const { count: txCount, error: txError } = await supabase
+    const { count: txCount, error: txError } = await (supabase as any)
       .from('distributor_inventory_transactions')
       .select('id', { count: 'exact', head: true })
       .eq('reference_type', 'primary_order')
@@ -311,7 +311,7 @@ const PrimaryOrders = () => {
     if (txError) throw txError;
 
     // Also verify that actual inventory records exist for this distributor
-    const { count: invCount, error: invError } = await supabase
+    const { count: invCount, error: invError } = await (supabase as any)
       .from('distributor_inventory')
       .select('id', { count: 'exact', head: true })
       .eq('distributor_id', distributorId);

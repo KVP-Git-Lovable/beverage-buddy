@@ -233,7 +233,7 @@ const PriceBookDetail = () => {
         updateData.final_price = finalPrice;
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('price_book_entries')
         .update(updateData)
         .eq('id', entry.id);
@@ -249,7 +249,7 @@ const PriceBookDetail = () => {
 
   const handleDeleteEntry = async (entryId: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('price_book_entries')
         .delete()
         .eq('id', entryId);

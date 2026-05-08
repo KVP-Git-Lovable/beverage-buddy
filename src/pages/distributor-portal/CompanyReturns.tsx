@@ -130,7 +130,7 @@ const CompanyReturns = () => {
   const loadData = async () => {
     try {
       // Load returns
-      const { data: returnsData } = await supabase
+      const { data: returnsData } = await (supabase as any)
         .from('distributor_company_returns')
         .select('*')
         .eq('distributor_id', distributorId)
@@ -139,7 +139,7 @@ const CompanyReturns = () => {
       setReturns(returnsData || []);
 
       // Load products
-      const { data: productsData } = await supabase
+      const { data: productsData } = await (supabase as any)
         .from('products')
         .select('id, name, unit')
         .eq('is_active', true)
@@ -147,7 +147,7 @@ const CompanyReturns = () => {
       setProducts(productsData || []);
 
       // Load inventory for selection
-      const { data: inventoryData } = await supabase
+      const { data: inventoryData } = await (supabase as any)
         .from('distributor_inventory')
         .select('*')
         .eq('distributor_id', distributorId)
@@ -221,7 +221,7 @@ const CompanyReturns = () => {
       const totalValue = newReturn.items.reduce((sum, i) => sum + i.total, 0);
 
       // Create return header
-      const { data: returnData, error: returnError } = await supabase
+      const { data: returnData, error: returnError } = await (supabase as any)
         .from('distributor_company_returns')
         .insert({
           distributor_id: distributorId,
@@ -251,7 +251,7 @@ const CompanyReturns = () => {
         expiry_date: item.expiry_date || null,
       }));
 
-      await supabase
+      await (supabase as any)
         .from('distributor_company_return_items')
         .insert(itemsToInsert);
 
@@ -270,7 +270,7 @@ const CompanyReturns = () => {
   const handleSubmitReturn = async (returnId: string) => {
     setSaving(true);
     try {
-      await supabase
+      await (supabase as any)
         .from('distributor_company_returns')
         .update({
           status: 'submitted',
@@ -292,7 +292,7 @@ const CompanyReturns = () => {
     setSaving(true);
     try {
       // Get return items
-      const { data: items } = await supabase
+      const { data: items } = await (supabase as any)
         .from('distributor_company_return_items')
         .select('*')
         .eq('company_return_id', returnId);
@@ -300,7 +300,7 @@ const CompanyReturns = () => {
       // Deduct from inventory
       if (items) {
         for (const item of items) {
-          const { data: invItem } = await supabase
+          const { data: invItem } = await (supabase as any)
             .from('distributor_inventory')
             .select('*')
             .eq('distributor_id', distributorId)
@@ -309,7 +309,7 @@ const CompanyReturns = () => {
 
           if (invItem) {
             const newQty = Math.max(0, invItem.quantity - item.quantity);
-            await supabase
+            await (supabase as any)
               .from('distributor_inventory')
               .update({
                 quantity: newQty,
@@ -320,7 +320,7 @@ const CompanyReturns = () => {
               .eq('id', invItem.id);
 
             // Log transaction
-            await supabase
+            await (supabase as any)
               .from('distributor_inventory_transactions')
               .insert({
                 distributor_id: distributorId,
@@ -341,7 +341,7 @@ const CompanyReturns = () => {
       }
 
       // Update return status
-      await supabase
+      await (supabase as any)
         .from('distributor_company_returns')
         .update({
           status: 'credited',
