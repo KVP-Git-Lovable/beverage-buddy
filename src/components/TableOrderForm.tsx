@@ -870,17 +870,16 @@ export const TableOrderForm = forwardRef<TableOrderFormHandle, TableOrderFormPro
     
   };
 
-  const removeRow = (id: string) => {
+  const removeRow = useCallback((id: string) => {
     setOrderRows(prev => {
       const updatedRows = prev.filter(row => row.id !== id);
       // Use helper to sync cart immediately
-      syncRowsToCart(updatedRows);
-      console.log('[removeRow] Cart synced after deletion');
+      syncRowsToCartRef.current(updatedRows);
       return updatedRows;
     });
-  };
+  }, []);
 
-  const updateRow = (id: string, field: keyof OrderRow, value: any) => {
+  const updateRow = useCallback((id: string, field: keyof OrderRow, value: any) => {
     const computeTotal = (prod?: Product, variant?: any, qty?: number, selectedUnit?: string) => {
       if (!prod || !qty) return 0;
 
