@@ -4,14 +4,11 @@ import { supabase } from '@/integrations/supabase/client';
 /**
  * Server-side product search for the Order Entry dropdown.
  *
- * - Debounces input (300ms)
- * - Requires min 2 characters before hitting the server
- * - Caches the last ~20 query results in-memory (LRU)
- * - Falls back to filtering the offline `products` array when offline
- * - Returns a flat list of selectable options (base products + active variants)
- *
- * Existing offline cache (useOfflineOrderEntry) is left untouched so cart calc,
- * schemes, voice/chat ordering and offline order placement keep working.
+ * The backing RPC `search_products_for_order` filters/limits before joining
+ * UOM and variant data, so it returns in <500ms even for the full catalog.
+ * We therefore call it on every (debounced) keystroke without an LRU cache
+ * and without merging stale offline rows. IndexedDB is used only as a true
+ * offline fallback (navigator.onLine === false).
  */
 
 export interface ProductSearchVariant {
@@ -39,121 +36,46 @@ export interface ProductSearchResult {
 }
 
 const MIN_CHARS = 2;
-const DEBOUNCE_MS = 150;
-const PAGE_SIZE = 100; // dropdown shows up to 100 matches per query
-const LRU_MAX = 20;
-
-function normalizeCategory(category: string | null | undefined): string {
-  const normalized = (category || '').trim().toLowerCase();
-  return normalized === 'all' ? 'all' : (category || '').trim();
-}
-
-type CacheKey = string;
-const cache = new Map<CacheKey, ProductSearchResult[]>();
-const cacheKey = (term: string, category: string) => `${term.toLowerCase()}|${normalizeCategory(category)}`;
-const cacheGet = (k: CacheKey) => {
-  if (!cache.has(k)) return undefined;
-  const v = cache.get(k)!;
-  // Refresh recency
-  cache.delete(k);
-  cache.set(k, v);
-  return v;
-};
-const cacheSet = (k: CacheKey, v: ProductSearchResult[]) => {
-  cache.set(k, v);
-  while (cache.size > LRU_MAX) {
-    const firstKey = cache.keys().next().value;
-    if (firstKey === undefined) break;
-    cache.delete(firstKey);
-  }
-};
+const DEBOUNCE_MS = 300;
+const PAGE_SIZE = 40;
 
 /**
- * Warm the empty-query cache so the first popover open is instant.
- * Safe to call multiple times — bails out if cached or offline.
+ * Map UI category to RPC param. The RPC treats '', NULL, and 'all' (any case)
+ * as "no filter", so '' is the safe canonical value.
  */
-export async function prefetchInitialProductSearch(category: string = 'all') {
-  const k = cacheKey('', category);
-  if (cacheGet(k)) return;
+function rpcCategory(category: string | null | undefined): string {
+  const v = (category || '').trim();
+  if (!v || v.toLowerCase() === 'all') return '';
+  return v;
+}
+
+/**
+ * Warm the empty-query result so the first popover open is instant.
+ * Safe to call multiple times — short-circuits when offline.
+ */
+export async function prefetchInitialProductSearch(category: string = '') {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
-  const normalizedCategory = normalizeCategory(category);
   try {
-    const { data, error } = await supabase.rpc('search_products_for_order', {
+    await supabase.rpc('search_products_for_order', {
       p_query: '',
-      p_category: normalizedCategory && normalizedCategory !== 'all' ? normalizedCategory : null,
+      p_category: rpcCategory(category),
       p_limit: PAGE_SIZE,
     });
-    if (!error && data) cacheSet(k, data as unknown as ProductSearchResult[]);
   } catch {
     /* ignore — will fetch on first open */
-  }
-}
-
-/**
- * Direct, fast fallback against products + product_variants when the heavy
- * RPC times out (the RPC joins UOM tables and can exceed statement timeout).
- * Mirrors what the RPC returns for the dropdown's needs.
- */
-async function directProductSearch(
-  term: string,
-  category: string,
-): Promise<ProductSearchResult[]> {
-  try {
-    let q = supabase
-      .from('products')
-      .select('id, sku, name, rate, unit, closing_stock, is_active, is_focused_product, category:product_categories(name), variants:product_variants(id, variant_name, sku, price, is_active, is_focused_product)')
-      .eq('is_active', true)
-      .limit(PAGE_SIZE);
-    if (term) {
-      const safe = term.replace(/[,()]/g, ' ');
-      q = q.or(`name.ilike.%${safe}%,sku.ilike.%${safe}%`);
-    }
-    if (category && category !== 'all') {
-      // category filter via joined name not supported in or(); skip — caller
-      // still receives matching products and the picker filters by category.
-    }
-    const { data, error } = await q;
-    if (error || !data) return [];
-    return (data as any[]).map((p) => ({
-      id: p.id,
-      sku: p.sku,
-      name: p.name,
-      rate: Number(p.rate),
-      unit: p.unit,
-      closing_stock: p.closing_stock ?? null,
-      is_active: p.is_active ?? true,
-      category_name: p.category?.name ?? null,
-      is_focused_product: p.is_focused_product ?? null,
-      default_uom_code: p.unit ?? null,
-      allowed_uom_codes: p.unit ? [p.unit] : null,
-      variants: Array.isArray(p.variants)
-        ? p.variants
-            .filter((v: any) => v.is_active !== false)
-            .map((v: any) => ({
-              id: v.id,
-              variant_name: v.variant_name,
-              sku: v.sku,
-              price: Number(v.price),
-              is_active: v.is_active,
-              is_focused_product: v.is_focused_product,
-            }))
-        : [],
-    }));
-  } catch {
-    return [];
   }
 }
 
 function offlineFilter(
   products: any[],
   term: string,
-  category: string
+  category: string,
 ): ProductSearchResult[] {
   const t = term.toLowerCase();
-  const normalizedCategory = normalizeCategory(category);
+  const cat = rpcCategory(category).toLowerCase();
   const filtered = products
     .filter((p) => p.is_active !== false)
-    .filter((p) => normalizedCategory === 'all' || p?.category?.name === normalizedCategory)
+    .filter((p) => !cat || (p?.category?.name || '').toLowerCase() === cat)
     .filter((p) => {
       if (!t) return true;
       if (p.name?.toLowerCase().includes(t)) return true;
@@ -163,7 +85,7 @@ function offlineFilter(
           (v: any) =>
             v.is_active !== false &&
             (v.variant_name?.toLowerCase().includes(t) ||
-              v.sku?.toLowerCase().includes(t))
+              v.sku?.toLowerCase().includes(t)),
         );
       }
       return false;
@@ -180,6 +102,8 @@ function offlineFilter(
     is_active: p.is_active ?? true,
     category_name: p?.category?.name ?? null,
     is_focused_product: p.is_focused_product ?? null,
+    default_uom_code: p.unit ?? null,
+    allowed_uom_codes: p.unit ? [p.unit] : null,
     variants: Array.isArray(p.variants)
       ? p.variants
           .filter((v: any) => v.is_active !== false)
@@ -198,7 +122,7 @@ function offlineFilter(
 export function useProductSearch(
   searchTerm: string,
   selectedCategory: string,
-  offlineProducts: any[]
+  offlineProducts: any[],
 ): {
   results: ProductSearchResult[];
   isSearching: boolean;
@@ -209,47 +133,33 @@ export function useProductSearch(
   const reqIdRef = useRef(0);
 
   const term = (searchTerm || '').trim();
-  const normalizedCategory = normalizeCategory(selectedCategory);
+  const categoryParam = rpcCategory(selectedCategory);
   const needsMoreChars = term.length > 0 && term.length < MIN_CHARS;
 
   // Keep latest offline list in a ref so it does NOT retrigger the search
-  // effect on every parent render (which was a major source of UI lag).
+  // effect on every parent render.
   const offlineRef = useRef(offlineProducts);
   useEffect(() => {
     offlineRef.current = offlineProducts;
   }, [offlineProducts]);
 
   useEffect(() => {
-    // Allow empty query — we still hit the server for the top 100 products
-    // so the dropdown isn't limited to whatever is in the offline cache.
     if (term.length > 0 && term.length < MIN_CHARS) {
       setResults([]);
       setIsSearching(false);
       return;
     }
 
-    const key = cacheKey(term, normalizedCategory);
-    const cached = cacheGet(key);
-    if (cached) {
-      setResults(cached);
-      setIsSearching(false);
-      return;
-    }
-
-    // Show offline matches immediately while waiting on the server
-    const localPreview = offlineFilter(offlineRef.current, term, normalizedCategory);
-    if (localPreview.length > 0) setResults(localPreview);
-    else if (term.length === 0) setResults([]);
-
     setIsSearching(true);
     const myReq = ++reqIdRef.current;
 
     const handle = setTimeout(
       async () => {
-        // Offline -> stay with local results, don't hit network
+        // Genuine offline → use IndexedDB fallback.
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          const local = offlineFilter(offlineRef.current, term, categoryParam);
           if (reqIdRef.current === myReq) {
-            setResults(localPreview);
+            setResults(local);
             setIsSearching(false);
           }
           return;
@@ -258,37 +168,24 @@ export function useProductSearch(
         try {
           const { data, error } = await supabase.rpc('search_products_for_order', {
             p_query: term,
-            p_category:
-              normalizedCategory && normalizedCategory !== 'all' ? normalizedCategory : null,
+            p_category: categoryParam,
             p_limit: PAGE_SIZE,
           });
 
           if (reqIdRef.current !== myReq) return; // stale
 
           if (error) {
-            console.warn(
-              '[useProductSearch] RPC error, trying direct query fallback:',
-              error.message,
-            );
-            // Direct fast fallback against products table (RPC sometimes
-            // hits statement timeout because of heavy UOM joins).
-            const rows = await directProductSearch(term, normalizedCategory);
-            if (reqIdRef.current !== myReq) return;
-            if (rows && rows.length > 0) {
-              cacheSet(key, rows);
-              setResults(rows);
-            } else {
-              setResults(localPreview);
-            }
+            console.warn('[useProductSearch] RPC error:', error.message);
+            // Still online — show empty rather than stale offline rows so the
+            // user gets a clear "no result" instead of confusing data.
+            setResults([]);
           } else {
-            const rows = (data || []) as unknown as ProductSearchResult[];
-            cacheSet(key, rows);
-            setResults(rows);
+            setResults((data || []) as unknown as ProductSearchResult[]);
           }
         } catch (e) {
           if (reqIdRef.current !== myReq) return;
-          console.warn('[useProductSearch] search failed, using local fallback', e);
-          setResults(localPreview);
+          console.warn('[useProductSearch] search failed', e);
+          setResults([]);
         } finally {
           if (reqIdRef.current === myReq) setIsSearching(false);
         }
@@ -297,7 +194,7 @@ export function useProductSearch(
     );
 
     return () => clearTimeout(handle);
-  }, [term, normalizedCategory]);
+  }, [term, categoryParam]);
 
   return { results, isSearching, needsMoreChars };
 }

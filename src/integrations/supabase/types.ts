@@ -20000,7 +20000,7 @@ export type Database = {
           p_category?: string
           p_is_focused?: boolean
           p_limit?: number
-          p_query: string
+          p_query?: string
         }
         Returns: {
           allowed_uom_codes: string[]
