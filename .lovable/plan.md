@@ -1,80 +1,110 @@
+## Problem
+
+When a product is picked in `/order-entry`, the **Rate** column shows "Select a unit to see price" / blank for 1–3 s.
+
+Tracing the price:
+
+- `TableOrderForm.tsx` (Table mode) renders the rate via `getPricePerUnit(row.product, row.variant, row.unit)` (line 1143). That function returns `null` until `loadProductUnits(productId)` resolves — i.e. it waits on the `product_uom_mapping` RPC for that product.
+- In Grid mode, `OrderEntry.tsx` lines 2460/2533 render `<UnitRateDisplay>` which calls `useUnitPrice → useProductUnits`. Same gate: until the per-product UOM rows arrive, `activeUnits.length === 0` ⇒ shows the "No unit set" / loading state.
+- `useProductUnits` already supports a synchronous seed via `getCachedProductUnits` (populated by `prefetchAllProductUnits`), but on first selection of an un-prefetched product the gate is still hit.
+
+Meanwhile the search row already carries everything needed for an instant render:
+
+- `rate` (₹ per price-basis unit)
+- `default_uom_code`
+- `allowed_uom_codes`
+
+`ProductPickerPopover` already attaches them as `_default_uom_code` / `_allowed_uom_codes` on the hydrated product, and `UnitSelect` already uses these as `hintAllowedCodes` / `hintDefaultCode` to render the unit dropdown synchronously. Only the **price** path still blocks.
+
 ## Goal
-Replace `/order-entry`'s 20k-product IDB load with the same server-side `search_products_for_order` pattern the Customer Portal uses, make the Unit dropdown render in the same frame as product selection, and fail cleanly when offline.
 
-## Important findings before coding
-- **`search_products_for_order` does NOT currently return UOM data.** Its RETURNS shape (migration `20260504090556`) is `id, sku, name, rate, unit, closing_stock, is_active, category_name, is_focused_product, variants`. There is **no `default_uom` and no `allowed_uoms`**. The user's Step 2 in Change 3 assumes those fields exist — they don't. We must either extend the RPC or read units from the already-prefetched UOM cache (`productCache` in `src/lib/uomEngine.ts` filled by `prefetchAllProductUnits`).
-- **The RPC also has no `is_focused` / `is_focused: true` parameter.** Featured-products mode needs an RPC change or a different empty-query path.
-- `useOfflineOrderEntry` is imported by other places too — we'll only stop using its `products`/`syncProductsInBackground` from `OrderEntry.tsx`, not delete the hook.
-- UOM conversion math in `UnitRateDisplay` requires `conversion_to_base` per UOM, which only `product_uom_mapping` carries — not flat strings. So even if we add codes to the search RPC, `UnitRateDisplay` still needs the prefetched UOM cache to compute prices correctly.
+When a product is selected:
 
-## Plan
+1. Price renders in the same render frame as selection — using `product.rate` at `default_uom_code`.
+2. Unit dropdown renders synchronously from the hint codes (already works).
+3. The full UOM mapping fetch fires in parallel and, once it arrives, refines the price for non-default units (or seamlessly replaces the hint-driven value with the mapping-driven value, identical for the default unit since `target.conversionToBase / basis.conversionToBase = 1`).
+4. Selecting the same product a second time triggers no refetch.
 
-### Change 1 — Extend `search_products_for_order` (DB migration)
-Add to the RETURNS shape and SELECT:
-- `default_uom_code text` — the `is_default_sales` PUM row's UOM code, falling back to base.
-- `allowed_uom_codes text[]` — array of all enabled UOM codes for the product (from PUM joined to `uom_master`, filtered by enabled).
-- New parameter `p_is_focused boolean DEFAULT NULL` — when true, restricts results to `is_focused_product = true` (used for the empty-query "featured" path).
+## Changes
 
-Implementation: one `LEFT JOIN LATERAL` aggregation against `product_uom_mapping`. No schema changes to `products`. Drop the legacy 3-arg signature explicitly to avoid overload (per project convention).
+### 1. `src/hooks/useUnitPrice.ts` — add synchronous fallback
 
-### Change 2 — Remove IDB product loading from `OrderEntry.tsx`
-- Drop the destructured `products: cachedProducts`, `syncProductsInBackground`, etc. from `useOfflineOrderEntry()`. (Keep the hook intact for other consumers.)
-- Remove the `[products, setProducts]` state, the cached-products → grid mapping block (around L809-L876), the auto-expand-on-load effect (L271-L285), and the `prefetchAllProductUnits()` call at L263.
-- Remove `filteredProducts` derived from the in-memory array and the grid pagination over it.
-- **Keep**: `sync_queue` IDB store, order placement, upload-on-reconnect, scheme calc, voice/chat ordering, table-mode submission.
+Extend the hook signature with optional hints:
 
-### Change 3 — Wire server-side search (table + grid mode)
-Mirror the Customer Portal pattern:
-- React Query `useInfiniteQuery` (or `useQuery` with `keepPreviousData: true`) keyed by `['order-entry-search', debouncedTerm, selectedCategory, isFocusedMode]`.
-- 300 ms debounce on the search input.
-- Calls: `supabase.rpc('search_products_for_order', { p_query, p_category, p_limit: 40, p_is_focused })`. Empty term → `p_is_focused = true`.
-- 6 s `AbortController` timeout → inline error: "Search unavailable — check your connection".
-- The picker in `ProductPickerPopover` already uses `useProductSearch`, which already calls this RPC; we'll align it to the new signature and the new `p_is_focused` empty-state path.
-- Grid mode: render the page from the same query result (page size 40), no in-memory filter.
-
-### Change 4 — Unit dropdown renders instantly
-The data source for `UnitSelect`/`UnitRateDisplay` already exists, but it's wired to `useProductUnits` which awaits a per-product RPC. Two-layer fix:
-1. **Synchronous unit list from search row.** Pass `allowed_uom_codes` + `default_uom_code` (added in Change 1) directly into `UnitSelect` as a prop. The Select renders these immediately on selection — same render frame, no spinner, no `loading` gate.
-2. **Conversion factors load in parallel for `UnitRateDisplay`.** The price-per-unit math still requires `conversion_to_base` from `product_uom_mapping`. Use the existing in-memory `productCache` (seeded by `prefetchAllProductUnits` on app boot) so `useUnitPrice` resolves synchronously when cache is hit. If a cache miss occurs (rare new product), fall back to displaying the base rate without blocking the Select.
-3. Remove any `{!isLoadingDetails && <UnitSelect />}` wrapper — none exists today, but verify and assert.
-
-`onProductSelected` shape:
 ```ts
-function onProductSelected(rowId, productId) {
-  setSelectedProduct(rowId, searchResults.find(p => p.id === productId));   // sync
-  if (!detailCache.current.has(productId)) {
-    supabase.rpc('get_product_details', { p_id: productId })
-      .then(({ data }) => detailCache.current.set(productId, data));        // parallel, schemes/variants
-  }
-}
+useUnitPrice(productId, baseRate, {
+  hintDefaultCode?: string,
+  hintAllowedCodes?: string[],
+})
 ```
-`detailCache` is a `useRef(new Map<string, ProductDetails>())` — session-scoped, never re-fetches the same product.
 
-### Change 5 — Offline UX (clean block, no crash)
-- Reuse the existing `useConnectivity` hook (already in `src/hooks/useConnectivity.ts`).
-- When `status === 'offline'`:
-  - Show a non-dismissible top banner: "You are offline. Product search is unavailable. Please reconnect to continue."
-  - Disable the search input and the product picker (`disabled` on the Popover trigger and the `Add row` button).
-  - Disable the Place Order button.
-  - Cart contents stay intact and visible.
-- When `status === 'online'`: banner hides, controls re-enable, query refetches via React Query's `refetchOnReconnect: true`.
+Behavior:
 
-## Files to touch
-- `supabase/migrations/<new>.sql` — extend `search_products_for_order` (drop old signature, new return cols, `p_is_focused`).
-- `src/pages/OrderEntry.tsx` — remove IDB product wiring, add search query + offline gating, pass UOM codes to `UnitSelect`, add detail cache.
-- `src/hooks/useProductSearch.ts` — accept `p_is_focused`, surface new UOM fields on `ProductSearchResult`.
-- `src/components/order-entry/UnitControls.tsx` — accept `allowedUomCodes` + `defaultUomCode` props; render Select synchronously from them; keep `useUnitPrice` only for the price display.
-- `src/components/order-entry/ProductPickerPopover.tsx` — propagate the new fields when an option is chosen.
+- When `activeUnits` is empty (mapping still loading) **and** hints are present: return a synthetic `activeUnits = [{ code, conversionToBase: 1, isBase, isPriceBasis, isDefaultSales }]` so `priceForCode(default) === baseRate`.
+- `defaultUnitCode` falls back to `hintDefaultCode`.
+- `priceForCode(code)`: if `code` matches a hint code, return `baseRate`; otherwise return `baseRate` (cannot convert without mapping — same as today).
+- Once `useProductUnits` resolves, the real mapping takes over automatically.
 
-## What we deliberately do NOT change
-- `useOfflineOrderEntry` (other consumers depend on it).
-- `sync_queue`, order placement, upload-on-reconnect, voice/chat order flow.
-- Customer Portal, admin pages, PM pages, scheme calculator, UOM conversion engine.
+This removes the "blank price" state without touching the conversion math used in `addToCart`.
+
+### 2. `src/components/order-entry/UnitControls.tsx` — `UnitRateDisplay`
+
+- Accept the same optional `hintDefaultCode` / `hintAllowedCodes` props (mirrors `UnitSelect`).
+- Pass them to `useUnitPrice`.
+- Remove the early-return `<span>No unit set</span>` when `activeUnits.length === 0` **if** hints are present — fall through to render `₹{baseRate.toFixed(2)}`.
+- Keep the misconfigured-product error only after mapping has loaded *and* it is genuinely empty *and* no hints exist.
+
+### 3. `src/pages/OrderEntry.tsx` (Grid mode)
+
+At lines 2460 & 2533, pass the new hint props to `<UnitRateDisplay>` and `<UnitSelect>`:
+
+```tsx
+hintDefaultCode={(product as any)?._default_uom_code ?? undefined}
+hintAllowedCodes={(product as any)?._allowed_uom_codes ?? undefined}
+```
+
+(`UnitSelect` for variants gets the same hints — variants share the parent product's UOM mapping.)
+
+### 4. `src/components/TableOrderForm.tsx` (Table mode)
+
+Replace the `getPricePerUnit` gate at line 1143 with a hint-aware path:
+
+```ts
+const hintDefault = (row.product as any)?._default_uom_code;
+const hintAllowed = (row.product as any)?._allowed_uom_codes as string[] | undefined;
+const mappingPrice = getPricePerUnit(row.product, row.variant, row.unit);
+
+// Show instantly: mapping price if known, else baseRate when row.unit
+// matches the hint default, else baseRate as the safe initial display.
+const baseRate = Number(row.variant ? row.variant.price : row.product.rate) || 0;
+const displayPrice =
+  mappingPrice ??
+  (row.unit && (row.unit === hintDefault || hintAllowed?.includes(row.unit))
+    ? baseRate
+    : baseRate);
+```
+
+Render `₹{displayPrice.toFixed(2)} per {row.unit || hintDefault}` immediately. Keep the existing `unconfigured` error branch for products whose mapping has loaded as empty.
+
+The `addToCart` path at line 311 (`syncRowsToCart`) is untouched — it still requires the real mapping, so cart math, scheme calculations and conversion factors continue to use `loadProductUnits`. Only the **display** is unblocked.
+
+### 5. Session detail cache (already mostly in place)
+
+- `useProductUnits` is React-Query–backed with `staleTime: 5 min` and `gcTime: 30 min`, plus an in-memory seed via `getCachedProductUnits`. Selecting the same product again uses the cache — no RPC.
+- Add an explicit guard in `OrderEntry.tsx` around `loadProductUnits(product.id)` in `addToCart` (line 1306): check `getCachedProductUnits(product.id)` first to avoid the redundant promise round-trip on repeat selections.
+- No new `get_product_details` cache is needed for this fix; the search row already supplies everything required for instant render.
+
+## What is NOT changing
+
+- `useProductSearch.ts`, `search_products_for_order` RPC, offline fallback path
+- Cart math, scheme calculations, UOM conversion factors (`addToCart` still loads the real mapping before committing a row)
+- `useOfflineOrderEntry`, `sync_queue`, offline order flow
+- Customer Portal, any other page
 
 ## Validation
-- `/order-entry` opens < 1.5 s, no `Saved to products` console output, no IDB read for products.
-- Network tab shows a single `search_products_for_order` call ~300 ms after each keystroke.
-- `console.time('unit-render')` around `setSelectedProduct` and `console.timeEnd` inside `UnitSelect`'s render shows < 50 ms.
-- `get_product_details` fires after selection but UI does not flicker; second selection of the same product → no new RPC call.
-- DevTools airplane mode → banner shows, picker + Place Order disabled, cart preserved, no errors. Toggling back online auto-refetches.
-- Schemes, UOM conversion, voice/chat, table mode, grid mode all work; Customer Portal unaffected; no TS errors.
+
+- Pick a never-before-selected product on a throttled "Slow 4G" profile: rate appears in the same render frame as the product name; the `product_uom_mapping` request is still in flight in DevTools Network panel.
+- Switch unit to a non-default UOM before mapping resolves: shows `baseRate` immediately, then refines once mapping arrives.
+- Select the same product again in another row: zero new RPC calls (React-Query cache hit).
+- Adding to cart still respects the strict UOM-mapping guard (toast on misconfigured products).
+- No TypeScript errors; all hint props are optional with safe defaults.
