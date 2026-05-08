@@ -1138,22 +1138,36 @@ export const TableOrderForm = forwardRef<TableOrderFormHandle, TableOrderFormPro
                       />
                       {row.product && (() => {
                         const unconfigured = isProductUnconfigured(row.product.id);
-                        const pricePerUnit = unconfigured
+                        const mappingPrice = unconfigured
                           ? null
                           : getPricePerUnit(row.product, row.variant, row.unit);
+                        const hintDefault = (row.product as any)?._default_uom_code as string | undefined;
+                        const hintAllowed = (row.product as any)?._allowed_uom_codes as string[] | undefined;
+                        const baseRate = Number(row.variant ? row.variant.price : row.product.rate) || 0;
+                        const effectiveUnit = row.unit || hintDefault || '';
+                        // Hint-driven instant render: if mapping isn't loaded yet,
+                        // show baseRate at the effective unit so the user sees a
+                        // price in the same render frame as product selection.
+                        const hintPrice =
+                          !unconfigured &&
+                          effectiveUnit &&
+                          (effectiveUnit === hintDefault || hintAllowed?.includes(effectiveUnit))
+                            ? baseRate
+                            : null;
+                        const displayPrice = mappingPrice ?? hintPrice;
                         return (
                           <>
                             {unconfigured ? (
                               <span className="text-[10px] text-destructive font-medium mt-0.5">
                                 No unit set for this product. Configure units in Product Master before ordering.
                               </span>
-                            ) : pricePerUnit == null || !row.unit ? (
+                            ) : displayPrice == null || !effectiveUnit ? (
                               <span className="text-[9px] text-muted-foreground mt-0.5">
                                 Select a unit to see price
                               </span>
                             ) : (
                               <span className="text-[9px] text-muted-foreground mt-0.5">
-                                ₹{pricePerUnit.toFixed(2)} per {row.unit}
+                                ₹{displayPrice.toFixed(2)} per {effectiveUnit}
                               </span>
                             )}
                             {/* Show applied scheme details */}
