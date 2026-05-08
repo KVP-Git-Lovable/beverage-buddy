@@ -79,7 +79,7 @@ export const AddRetailer = () => {
       category: "",
       notes: "",
       parentType: "Distributor",
-      parentName: "BHARATH BEVERAGES",
+      parentName: "",
       selectedDistributors: [] as string[],
       locationTag: "",
       retailType: "",
