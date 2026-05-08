@@ -132,7 +132,7 @@ export function ResourcesPanel({ projectId }: Props) {
   // Update resource
   const updateResource = useMutation({
     mutationFn: async ({ id, ...values }: { id: string } & Partial<Resource>) => {
-      const { error } = await supabase.from("pm_project_resources").update(values).eq("id", id);
+      const { error } = await supabase.from("pm_project_resources").update(values as any).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

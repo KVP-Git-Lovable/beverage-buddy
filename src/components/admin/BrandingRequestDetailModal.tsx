@@ -139,7 +139,7 @@ export function BrandingRequestDetailModal({ open, onClose, data, onUpdate }: Br
 
       const { error } = await supabase
         .from('branding_requests')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', data.id);
 
       if (error) throw error;
