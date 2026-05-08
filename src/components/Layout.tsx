@@ -2,6 +2,7 @@ import { ReactNode, useEffect, memo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { Navbar } from "./Navbar";
 import { ChatWidget } from "./chat/ChatWidget";
+import { useNetwork } from "@/contexts/NetworkContext";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useStartupCleanup } from "@/hooks/useStartupCleanup";
 import { periodicMemoryCleanup, initMemoryPressureHandler } from "@/utils/memoryManager";
@@ -15,6 +16,7 @@ interface LayoutProps {
 let memoryHandlersInitialized = false;
 
 export const Layout = memo(({ children }: LayoutProps) => {
+  const { isOnline } = useNetwork();
   const { processSyncQueue } = useOfflineSync();
   const location = useLocation();
   const wasOfflineRef = useRef(false);
