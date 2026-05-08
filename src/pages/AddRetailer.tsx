@@ -209,6 +209,13 @@ export const AddRetailer = () => {
     }
   }, [selectedBeat, beats]);
 
+  // Auto-fill parent name from company when "Company" parent type is selected
+  useEffect(() => {
+    if (retailerData.parentType === "Company" && company?.name && retailerData.parentName !== company.name) {
+      setRetailerData((prev: any) => ({ ...prev, parentName: company.name }));
+    }
+  }, [retailerData.parentType, company?.name]);
+
   // Load beats from the beats table (online) or from cache (offline)
   // CACHE-FIRST: Always load from cache immediately, then update from network in background
   const loadBeats = async () => {
