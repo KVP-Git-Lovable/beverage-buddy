@@ -219,7 +219,7 @@ const PrimaryOrders = () => {
               batch_number: item.batch_number || null,
               expiry_date: item.expiry_date || null,
               last_received_date: new Date().toISOString().split('T')[0],
-            });
+            } as any);
 
           if (insertError) throw insertError;
         }

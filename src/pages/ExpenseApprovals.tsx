@@ -111,7 +111,7 @@ const ExpenseApprovals = () => {
       const userIds = [...new Set((data || []).map((e: any) => e.user_id))];
       let nameMap = new Map<string, string>();
       if (userIds.length > 0) {
-        const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', userIds);
+        const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', userIds as string[]);
         profiles?.forEach((p: any) => nameMap.set(p.id, p.full_name));
       }
 
@@ -176,7 +176,7 @@ const ExpenseApprovals = () => {
       const userIds = [...new Set((data || []).map((e: any) => e.user_id))];
       let nameMap = new Map<string, string>();
       if (userIds.length > 0) {
-        const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', userIds);
+        const { data: profiles } = await supabase.from('profiles').select('id, full_name').in('id', userIds as string[]);
         profiles?.forEach((p: any) => nameMap.set(p.id, p.full_name));
       }
 
