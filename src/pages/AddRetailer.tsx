@@ -32,6 +32,7 @@ export const AddRetailer = () => {
   const location = useLocation();
   const { user } = useAuth();
   const connectivityStatus = useConnectivity();
+  const { company } = useCompanyData();
   const returnTo = location.state?.returnTo || '/my-retailers';
   const plannedBeats = location.state?.plannedBeats || [];
   
