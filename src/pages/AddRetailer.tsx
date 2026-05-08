@@ -24,6 +24,7 @@ import { useOfflineRetailers } from "@/hooks/useOfflineRetailers";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { offlineStorage, STORES } from "@/lib/offlineStorage";
 import { useConnectivity } from "@/hooks/useConnectivity";
+import { useCompanyData } from "@/hooks/useCompanyData";
 
 export const AddRetailer = () => {
   const { t } = useTranslation();
@@ -31,6 +32,7 @@ export const AddRetailer = () => {
   const location = useLocation();
   const { user } = useAuth();
   const connectivityStatus = useConnectivity();
+  const { company } = useCompanyData();
   const returnTo = location.state?.returnTo || '/my-retailers';
   const plannedBeats = location.state?.plannedBeats || [];
   
@@ -77,7 +79,7 @@ export const AddRetailer = () => {
       category: "",
       notes: "",
       parentType: "Distributor",
-      parentName: "BHARATH BEVERAGES",
+      parentName: "",
       selectedDistributors: [] as string[],
       locationTag: "",
       retailType: "",
@@ -206,6 +208,13 @@ export const AddRetailer = () => {
       setBeatMappedDistributors([]);
     }
   }, [selectedBeat, beats]);
+
+  // Auto-fill parent name from company when "Company" parent type is selected
+  useEffect(() => {
+    if (retailerData.parentType === "Company" && company?.name && retailerData.parentName !== company.name) {
+      setRetailerData((prev: any) => ({ ...prev, parentName: company.name }));
+    }
+  }, [retailerData.parentType, company?.name]);
 
   // Load beats from the beats table (online) or from cache (offline)
   // CACHE-FIRST: Always load from cache immediately, then update from network in background
@@ -1834,6 +1843,13 @@ export const AddRetailer = () => {
                         )}
                       </SelectContent>
                     </Select>
+                  ) : retailerData.parentType === "Company" ? (
+                    <Input
+                      value={company?.name || retailerData.parentName || ""}
+                      readOnly
+                      className="bg-muted text-sm"
+                      placeholder="Loading company name..."
+                    />
                   ) : (
                     <Input
                       placeholder="Enter parent name"
