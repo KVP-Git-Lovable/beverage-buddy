@@ -1,8 +1,8 @@
-import { ReactNode, useEffect, memo, useCallback, useRef } from "react";
+import { ReactNode, useEffect, memo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { Navbar } from "./Navbar";
 import { ChatWidget } from "./chat/ChatWidget";
-import { useMasterDataCache } from "@/hooks/useMasterDataCache";
+import { useNetwork } from "@/contexts/NetworkContext";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { useStartupCleanup } from "@/hooks/useStartupCleanup";
 import { periodicMemoryCleanup, initMemoryPressureHandler } from "@/utils/memoryManager";
@@ -16,10 +16,9 @@ interface LayoutProps {
 let memoryHandlersInitialized = false;
 
 export const Layout = memo(({ children }: LayoutProps) => {
-  const { cacheAllMasterData, isOnline } = useMasterDataCache();
+  const { isOnline } = useNetwork();
   const { processSyncQueue } = useOfflineSync();
   const location = useLocation();
-  const hasCachedRef = useRef(false);
   const wasOfflineRef = useRef(false);
   
   // Run startup cleanup routines (orphan orders, stale cache, etc.)
@@ -38,30 +37,6 @@ export const Layout = memo(({ children }: LayoutProps) => {
   useEffect(() => {
     periodicMemoryCleanup();
   }, [location.pathname]);
-
-  // Auto-cache master data when online - only once per session
-  useEffect(() => {
-    if (isOnline && !hasCachedRef.current) {
-      hasCachedRef.current = true;
-      console.log('🔄 Layout: Caching master data...');
-      // Defer caching to not block UI
-      const ric = (window as any).requestIdleCallback as
-        | undefined
-        | ((cb: () => void) => number);
-
-      if (typeof ric === "function") {
-        ric(() => {
-          cacheAllMasterData();
-          processSyncQueue();
-        });
-      } else {
-        setTimeout(() => {
-          cacheAllMasterData();
-          processSyncQueue();
-        }, 100);
-      }
-    }
-  }, [isOnline, cacheAllMasterData, processSyncQueue]);
 
   // Trigger sync whenever connectivity is restored (offline -> online transition)
   // NOTE: syncComplete event is dispatched by useOfflineSync, not here (avoid duplicate dispatches)
