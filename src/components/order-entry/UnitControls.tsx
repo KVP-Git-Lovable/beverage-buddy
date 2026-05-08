@@ -117,11 +117,18 @@ export const UnitRateDisplay: React.FC<{
   productId: string;
   baseRate: number;
   selectedUnitCode: string | undefined;
-}> = ({ productId, baseRate, selectedUnitCode }) => {
-  const { priceForCode, baseUnitCode, activeUnits } = useUnitPrice(productId, baseRate);
+  /** Hint codes from the search row so price renders synchronously before
+   *  product_uom_mapping has loaded. */
+  hintAllowedCodes?: string[];
+  hintDefaultCode?: string;
+}> = ({ productId, baseRate, selectedUnitCode, hintAllowedCodes, hintDefaultCode }) => {
+  const { priceForCode, baseUnitCode, activeUnits, isHintFallback } = useUnitPrice(
+    productId,
+    baseRate,
+    { hintDefaultCode, hintAllowedCodes },
+  );
 
-  // No mapping → product is misconfigured. Refuse to display a price; the
-  // raw baseRate has no meaningful unit and would silently mislead the user.
+  // Real mapping has loaded and is empty AND we have no hints → misconfigured.
   if (activeUnits.length === 0) {
     return (
       <span className="text-destructive text-[10px] font-medium">
