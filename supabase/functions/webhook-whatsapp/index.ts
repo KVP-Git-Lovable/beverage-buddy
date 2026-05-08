@@ -923,6 +923,33 @@ serve(async (req) => {
     const message = body.trim();
     const phone = from;
 
+    // ── Bump last_active_at for ANY inbound message so the 24h WhatsApp
+    //    session window stays in sync with Twilio's view. Fire-and-forget. ──
+    if (phone) {
+      // @ts-ignore - EdgeRuntime is available in Supabase Edge Functions
+      EdgeRuntime.waitUntil((async () => {
+        try {
+          const sb = getSupabaseClient();
+          const nowIso = new Date().toISOString();
+          const { data: existing } = await sb
+            .from('whatsapp_sessions')
+            .select('id')
+            .eq('phone_number', phone)
+            .maybeSingle();
+          if (existing?.id) {
+            await sb.from('whatsapp_sessions')
+              .update({ last_active_at: nowIso })
+              .eq('id', existing.id);
+          } else {
+            await sb.from('whatsapp_sessions')
+              .insert({ phone_number: phone, last_active_at: nowIso });
+          }
+        } catch (e) {
+          console.error('last_active_at bump failed:', e);
+        }
+      })());
+    }
+
     // ── Dedup repeated Twilio retries (in-memory, best-effort) ──
     const now = Date.now();
     for (const [sid, ts] of recentMessageSids) {
