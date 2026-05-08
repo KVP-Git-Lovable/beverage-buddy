@@ -375,6 +375,11 @@ export const TableOrderForm = forwardRef<TableOrderFormHandle, TableOrderFormPro
     DEV_LOG && console.log('[syncRowsToCart] Synced to cart:', cartItems.length, 'items (mapping-driven UOM); skipped:', skipped.length);
   };
 
+  // Stable ref so memoized callbacks (removeRow/updateRow) don't depend on
+  // syncRowsToCart's identity, which changes every render.
+  const syncRowsToCartRef = useRef(syncRowsToCart);
+  useEffect(() => { syncRowsToCartRef.current = syncRowsToCart; });
+
   // Expose applyVoiceAutoFill to parent via ref
   useImperativeHandle(ref, () => ({
     applyVoiceAutoFill: (results: VoiceAutoFillResult[]) => {
