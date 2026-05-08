@@ -951,10 +951,10 @@ export const TableOrderForm = forwardRef<TableOrderFormHandle, TableOrderFormPro
       });
       
       // Use helper to sync cart immediately
-      syncRowsToCart(updatedRows);
+      syncRowsToCartRef.current(updatedRows);
       return updatedRows;
     });
-  };
+  }, []);
 
   const addToCart = () => {
     if (isAddingToCart) return;
