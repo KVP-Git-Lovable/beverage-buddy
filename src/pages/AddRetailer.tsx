@@ -1836,6 +1836,13 @@ export const AddRetailer = () => {
                         )}
                       </SelectContent>
                     </Select>
+                  ) : retailerData.parentType === "Company" ? (
+                    <Input
+                      value={company?.name || retailerData.parentName || ""}
+                      readOnly
+                      className="bg-muted text-sm"
+                      placeholder="Loading company name..."
+                    />
                   ) : (
                     <Input
                       placeholder="Enter parent name"
