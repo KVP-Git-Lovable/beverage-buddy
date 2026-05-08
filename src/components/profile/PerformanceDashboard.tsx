@@ -55,11 +55,11 @@ export function PerformanceDashboard({ userId }: { userId: string }) {
     try {
       // Fetch orders
       
-      const ordersQuery = supabase
+      const ordersQuery = (supabase as any)
         .from("orders")
         .select("id, total_amount, created_at")
         .eq("created_by", userId)
-        .gte("created_at", monthStart.toISOString()) as unknown as any;
+        .gte("created_at", monthStart.toISOString());
       const ordersResult = await ordersQuery;
       const orders = (ordersResult.data as OrderRecord[]) || [];
 
@@ -100,11 +100,11 @@ export function PerformanceDashboard({ userId }: { userId: string }) {
 
       // Fetch visits
       
-      const visitsQuery = supabase
+      const visitsQuery = (supabase as any)
         .from("visits")
         .select("id, created_at")
         .eq("created_by", userId)
-        .gte("created_at", monthStart.toISOString()) as unknown as any;
+        .gte("created_at", monthStart.toISOString());
       const visitsResult = await visitsQuery;
       const visits = (visitsResult.data as VisitRecord[]) || [];
 
@@ -124,22 +124,22 @@ export function PerformanceDashboard({ userId }: { userId: string }) {
 
       // Fetch retailers
       
-      const retailersQuery = supabase
+      const retailersQuery = (supabase as any)
         .from("retailers")
         .select("created_at")
         .eq("created_by", userId)
-        .gte("created_at", monthStart.toISOString()) as unknown as any;
+        .gte("created_at", monthStart.toISOString());
       const retailersResult = await retailersQuery;
       const retailers = (retailersResult.data as RetailerRecord[]) || [];
 
       // Previous month data
       const prevMonthStart = startOfMonth(subDays(monthStart, 1));
-      const prevOrdersQuery = supabase
+      const prevOrdersQuery = (supabase as any)
         .from("orders")
         .select("total_amount")
         .eq("created_by", userId)
         .gte("created_at", prevMonthStart.toISOString())
-        .lt("created_at", monthStart.toISOString()) as unknown as any;
+        .lt("created_at", monthStart.toISOString());
       const prevOrdersResult = await prevOrdersQuery;
       const prevOrders = (prevOrdersResult.data as Array<{ total_amount: number }>) || [];
 

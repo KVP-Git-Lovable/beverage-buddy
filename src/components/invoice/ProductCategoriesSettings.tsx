@@ -149,7 +149,7 @@ export default function ProductCategoriesSettings() {
       } else {
         const { data, error } = await supabase
           .from('company_product_categories')
-          .insert({ company_id: companyId, categories_json: jsonData as any })
+          .insert({ company_id: companyId, categories_json: jsonData as any } as any)
           .select('id')
           .single();
         if (error) throw error;

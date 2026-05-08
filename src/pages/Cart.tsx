@@ -1258,7 +1258,7 @@ export const Cart = () => {
                 };
               });
 
-              await supabase.from('invoice_items').insert(invoiceItems);
+              await supabase.from('invoice_items').insert(invoiceItems as any);
             }
 
             console.log('✅ Background post-order processing completed');

@@ -80,7 +80,7 @@ export const useVoiceOrderAssistant = (products: VoiceProduct[], retailerId?: st
     if (!retailerId || dbLoadedRef.current) return;
     const loadFromDb = async () => {
       try {
-        const { data, error: dbErr } = await supabase
+        const { data, error: dbErr } = await (supabase as any)
           .from('customer_portal_voice_orders')
           .select('*')
           .eq('retailer_id', retailerId)
@@ -154,7 +154,7 @@ export const useVoiceOrderAssistant = (products: VoiceProduct[], retailerId?: st
         search_term: item.searchTerm,
         confidence: item.confidence,
       }));
-      await supabase.from('customer_portal_voice_orders').upsert(rows);
+      await (supabase as any).from('customer_portal_voice_orders').upsert(rows);
     } catch (err) {
       console.error('Failed to save voice orders:', err);
     }
@@ -163,7 +163,7 @@ export const useVoiceOrderAssistant = (products: VoiceProduct[], retailerId?: st
   const deleteItemFromDb = useCallback(async (id: string) => {
     if (!retailerId) return;
     try {
-      await supabase.from('customer_portal_voice_orders').delete().eq('id', id);
+      await (supabase as any).from('customer_portal_voice_orders').delete().eq('id', id);
     } catch (err) {
       console.error('Failed to delete voice order:', err);
     }
@@ -172,7 +172,7 @@ export const useVoiceOrderAssistant = (products: VoiceProduct[], retailerId?: st
   const deleteAllFromDb = useCallback(async () => {
     if (!retailerId) return;
     try {
-      await supabase.from('customer_portal_voice_orders').delete().eq('retailer_id', retailerId);
+      await (supabase as any).from('customer_portal_voice_orders').delete().eq('retailer_id', retailerId);
     } catch (err) {
       console.error('Failed to clear voice orders:', err);
     }
