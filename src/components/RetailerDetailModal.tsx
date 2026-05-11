@@ -1383,6 +1383,9 @@ export const RetailerDetailModal = ({ isOpen, onClose, retailer, onSuccess, star
                           <SelectItem value="Restaurants">Restaurants</SelectItem>
                           <SelectItem value="Catering Services">Catering Services</SelectItem>
                           <SelectItem value="Business Office">Business Office</SelectItem>
+                          <SelectItem value="Pharmacy">Pharmacy</SelectItem>
+                          <SelectItem value="Medical Store">Medical Store</SelectItem>
+                          <SelectItem value="Clinic">Clinic</SelectItem>
                           <SelectItem value="Others">Others</SelectItem>
                         </SelectContent>
                       </Select>
