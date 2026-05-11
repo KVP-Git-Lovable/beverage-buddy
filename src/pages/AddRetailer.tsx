@@ -128,7 +128,7 @@ export const AddRetailer = () => {
 
   const categories = ["Category A", "Category B", "Category C"];
   const parentTypes = ["Company", "Super Stockist", "Distributor"];
-  const retailTypes = ["Individual stall", "Kirana store", "Super market", "Bakery", "Milk Parlour", "Hotel", "Restaurants", "Catering Services", "Business Office", "Others"];
+  const retailTypes = ["Individual stall", "Kirana store", "Super market", "Bakery", "Milk Parlour", "Hotel", "Restaurants", "Catering Services", "Business Office", "Pharmacy", "Medical Store", "Clinic", "Others"];
   const potentials = ["High", "Medium", "Low"];
   
   // All Indian states and union territories
