@@ -421,28 +421,30 @@ export const AdminDashboard = () => {
 
         {/* Admin Tabs */}
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Users & Roles
-            </TabsTrigger>
-            <TabsTrigger value="create-user" className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              Create User
-            </TabsTrigger>
-            <TabsTrigger value="invite-user" className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              Invite User
-            </TabsTrigger>
-            <TabsTrigger value="approvers" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Approvers
-            </TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto scrollbar-hide -mx-1 px-1">
+            <TabsList className="inline-flex w-max min-w-full sm:grid sm:grid-cols-5 sm:w-full">
+              <TabsTrigger value="overview" className="flex items-center gap-2 whitespace-nowrap">
+                <BarChart3 className="h-4 w-4" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="users" className="flex items-center gap-2 whitespace-nowrap">
+                <Users className="h-4 w-4" />
+                Users & Roles
+              </TabsTrigger>
+              <TabsTrigger value="create-user" className="flex items-center gap-2 whitespace-nowrap">
+                <UserPlus className="h-4 w-4" />
+                Create User
+              </TabsTrigger>
+              <TabsTrigger value="invite-user" className="flex items-center gap-2 whitespace-nowrap">
+                <UserPlus className="h-4 w-4" />
+                Invite User
+              </TabsTrigger>
+              <TabsTrigger value="approvers" className="flex items-center gap-2 whitespace-nowrap">
+                <Shield className="h-4 w-4" />
+                Approvers
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="space-y-6">
             {/* User Hierarchy */}
