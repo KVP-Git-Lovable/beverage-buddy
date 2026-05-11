@@ -12,7 +12,7 @@ const WizardStepper: React.FC<WizardStepperProps> = ({ currentStep, completedSte
   const currentIndex = WIZARD_STEPS.findIndex(s => s.id === currentStep);
   
   return (
-    <div className="flex flex-col space-y-1 w-48 pr-6 border-r border-border">
+    <div className="flex flex-col space-y-1 w-full md:w-48 md:pr-6 md:border-r md:border-border">
       {WIZARD_STEPS.map((step, index) => {
         const isCompleted = completedSteps.includes(step.id);
         const isCurrent = step.id === currentStep;
