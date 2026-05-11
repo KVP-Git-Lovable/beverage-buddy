@@ -300,14 +300,14 @@ const CreateUserWizard: React.FC<CreateUserWizardProps> = ({ onSuccess }) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="flex min-h-[500px]">
+        <div className="flex flex-col md:flex-row md:min-h-[500px]">
           {/* Left Sidebar - Steps */}
-          <div className="p-6 bg-muted/30">
+          <div className="p-4 md:p-6 bg-muted/30 md:w-auto w-full overflow-x-auto">
             <WizardStepper currentStep={currentStep} completedSteps={completedSteps} />
           </div>
 
           {/* Right Content Area */}
-          <div className="flex-1 p-6 flex flex-col">
+          <div className="flex-1 min-w-0 p-4 md:p-6 flex flex-col">
             <div className="flex-1">
               {renderStepContent()}
             </div>
