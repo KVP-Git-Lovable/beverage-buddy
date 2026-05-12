@@ -27,6 +27,11 @@ export async function initCrashlytics(): Promise<void> {
     console.log('⚠️ Crashlytics: Skipping on web platform');
     return;
   }
+  // Crashlytics is Android-only; skip on iOS.
+  if (Capacitor.getPlatform() === 'ios') {
+    console.log('⚠️ Crashlytics: Disabled on iOS');
+    return;
+  }
 
   try {
     await FirebaseCrashlytics.setEnabled({ enabled: true });
