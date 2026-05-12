@@ -264,35 +264,51 @@ const App = () => {
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
+    const ignoredErrors = [
+      'ServiceWorker',
+      'service-worker',
+      'Failed to fetch',
+      'Network request failed',
+      'NetworkError',
+      'Load failed',
+      'AbortError',
+      'chunk',
+      'ChunkLoadError',
+      'Loading chunk',
+      'Loading CSS chunk',
+      'ResizeObserver',
+      'Script error',
+      'Non-Error promise rejection',
+      'cancelled',
+      'The operation was aborted',
+      'WebKit',
+      'null is not an object',
+      'undefined is not an object',
+    ];
+
+    const isIgnored = (message: string) =>
+      !message || ignoredErrors.some(err => message.toLowerCase().includes(err.toLowerCase()));
+
     const errorHandler = (event: ErrorEvent) => {
+      const message = event.error?.message || event.message || '';
+      if (isIgnored(message)) {
+        console.warn("Non-critical error suppressed:", message);
+        return;
+      }
       console.error("Global error:", event.error ?? event.message);
-      setHasError(true);
+      // Do not crash the entire app for runtime errors – let route-level UI handle it.
     };
 
     const rejectionHandler = (event: PromiseRejectionEvent) => {
       const message = event.reason?.message || event.reason?.toString() || '';
-      
-      const ignoredErrors = [
-        'ServiceWorker',
-        'service-worker',
-        'Failed to fetch',
-        'Network request failed',
-        'NetworkError',
-        'Load failed',
-        'AbortError',
-        'chunk',
-      ];
-      
-      const isIgnored = ignoredErrors.some(err => message.includes(err));
-      
-      if (isIgnored) {
+      if (isIgnored(message)) {
         console.warn("Non-critical rejection suppressed:", message);
         event.preventDefault();
         return;
       }
-      
       console.error("Unhandled rejection:", event.reason);
-      setHasError(true);
+      // Do not crash the entire app – swallow to keep page usable.
+      event.preventDefault();
     };
 
     window.addEventListener("error", errorHandler);
