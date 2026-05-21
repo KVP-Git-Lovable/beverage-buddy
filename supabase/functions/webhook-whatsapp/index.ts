@@ -738,6 +738,78 @@ async function handleOrderStatusQuery(
 💳 Payment: ${order.payment_status || 'Pending'}
 💰 Total: ${total}`;
 }
+
+// ── Product Availability Query Handler ──────────────────────────────
+// Detects messages like "Do you have Crocin?", "Is Paracetamol available?",
+// "Need Dolo" and replies with matching products from the products table.
+async function handleProductAvailabilityQuery(
+  supabase: any,
+  message: string
+): Promise<string | null> {
+  const intentPatterns = [
+    /\bavailable\b/i,
+    /\bdo you have\b/i,
+    /\bis\s+.+\s+available\b/i,
+    /\bneed\b/i,
+    /\bhave\s+.+\s+product\b/i,
+    /\bproduct available\b/i,
+  ];
+  if (!intentPatterns.some((re) => re.test(message))) return null;
+
+  // Extract probable product term: strip punctuation + filler words
+  const stopwords = new Set([
+    'whether', 'product', 'products', 'available', 'availability',
+    'do', 'you', 'have', 'has', 'need', 'needed', 'is', 'are', 'was',
+    'please', 'pls', 'the', 'a', 'an', 'any', 'some', 'kindly',
+    'sir', 'madam', 'bhai', 'ji', 'hai', 'kya', 'mujhe', 'chahiye',
+    'mil', 'sakta', 'sakti', 'currently', 'right', 'now', 'in', 'stock',
+    'to', 'for', 'me', 'we', 'us', 'your', 'this', 'that',
+  ]);
+  const cleaned = message
+    .toLowerCase()
+    .replace(/[?!.,;:"'()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const term = cleaned
+    .split(' ')
+    .filter((w) => w && !stopwords.has(w))
+    .join(' ')
+    .trim();
+
+  if (!term || term.length < 2) {
+    return "I'm sorry, I couldn't make out which product you're asking about. Could you share the product name?";
+  }
+
+  // Escape characters that have meaning in PostgREST .or() filters
+  const safeTerm = term.replace(/[,%_()]/g, ' ').trim();
+  if (!safeTerm) {
+    return "I'm sorry, we could not find a matching product at the moment. Please try searching with another product name or contact our team for assistance.";
+  }
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('name, sku, is_active')
+    .eq('is_active', true)
+    .or(`name.ilike.%${safeTerm}%,sku.ilike.%${safeTerm}%`)
+    .order('name')
+    .limit(10);
+
+  if (error) {
+    console.error('Product availability query error:', error);
+    return "Sorry, I couldn't check product availability right now. Please try again shortly.";
+  }
+
+  const matches = (data || []).map((p: any) => p.name).filter(Boolean);
+
+  if (matches.length === 0) {
+    return "I'm sorry, we could not find a matching product at the moment. Please try searching with another product name or contact our team for assistance.";
+  }
+  if (matches.length === 1) {
+    return `Yes, the requested product is available.\n\nAvailable product:\n${matches[0]}`;
+  }
+  return `Yes, we have the following matching products available:\n\n${matches.join(', ')}`;
+}
+
 // ── Retailer Info Query Handler ─────────────────────────────────────
 async function handleRetailerInfoQuery(
   supabase: any,
@@ -1155,6 +1227,17 @@ async function processMessageAsync(phone: string, message: string): Promise<void
         aiReply = `👋 Hello *${retailer.name}*! Welcome back.\n\n🛒 Let's place your order.\n\n📦 *Available Products:*\n\n${productList}`;
         await saveSession(supabase, session);
         await sendTwilioFreeForm(phone, aiReply); return;
+      }
+
+      // ── Handle Product Availability Query (after Place Order, before Gemini) ──
+      const availabilityReply = await handleProductAvailabilityQuery(supabase, message);
+      if (availabilityReply) {
+        session.conversation_history.push(
+          { role: 'user', parts: [{ text: message }] },
+          { role: 'model', parts: [{ text: availabilityReply }] }
+        );
+        await saveSession(supabase, session);
+        await sendTwilioFreeForm(phone, availabilityReply); return;
       }
 
       // ── Standard Gemini Chat (IDLE or AWAITING_ORDER_DETAILS) ──
