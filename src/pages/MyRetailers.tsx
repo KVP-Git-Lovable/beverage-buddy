@@ -1025,7 +1025,7 @@ export const MyRetailers = () => {
                         </TableCell>
                         {selectedUserIds.length > 1 && (
                           <TableCell className="text-sm text-muted-foreground">
-                            {r.owner_name || '-'}
+                            {userNameMap[r.user_id] || r.owner_name || '-'}
                           </TableCell>
                         )}
                         <TableCell>
