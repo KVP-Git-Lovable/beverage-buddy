@@ -627,12 +627,11 @@ export const MyRetailers = () => {
       });
     }
 
-    // Now delete from retailers table
+    // Now delete from retailers table (RLS enforces ownership/hierarchy)
     const { error } = await supabase
       .from("retailers")
       .delete()
-      .in("id", selectedRetailerIds)
-      .eq("user_id", user?.id);
+      .in("id", selectedRetailerIds);
     
     if (error) {
       toast({ title: "Failed to delete", description: error.message, variant: "destructive" });
