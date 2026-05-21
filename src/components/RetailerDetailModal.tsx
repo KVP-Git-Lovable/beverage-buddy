@@ -1220,10 +1220,10 @@ export const RetailerDetailModal = ({ isOpen, onClose, retailer, onSuccess, star
 
               {/* Customer Portal Section */}
               <RetailerCustomerPortalSection
-                retailerId={retailer.id}
+                retailerId={formData.id}
                 retailerPhone={formData.phone || null}
-                portalEnabled={!!(retailer as any).portal_enabled}
-                portalPin={(retailer as any).portal_pin || null}
+                portalEnabled={!!(formData as any).portal_enabled}
+                portalPin={(formData as any).portal_pin || null}
                 onPortalUpdate={() => {}}
               />
 
