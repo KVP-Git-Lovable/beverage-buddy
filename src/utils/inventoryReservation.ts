@@ -29,7 +29,7 @@ export async function reserveStockForPackingList(
       // Get current inventory
       const { data: inventory, error: fetchError } = await supabase
         .from('distributor_inventory')
-        .select('id, quantity, reserved_quantity, available_quantity')
+        .select('id, quantity, reserved_quantity')
         .eq('distributor_id', distributorId)
         .eq('product_id', item.product_id)
         .single();
