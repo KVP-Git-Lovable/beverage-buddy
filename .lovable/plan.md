@@ -1,110 +1,113 @@
-## Problem
-
-When a product is picked in `/order-entry`, the **Rate** column shows "Select a unit to see price" / blank for 1–3 s.
-
-Tracing the price:
-
-- `TableOrderForm.tsx` (Table mode) renders the rate via `getPricePerUnit(row.product, row.variant, row.unit)` (line 1143). That function returns `null` until `loadProductUnits(productId)` resolves — i.e. it waits on the `product_uom_mapping` RPC for that product.
-- In Grid mode, `OrderEntry.tsx` lines 2460/2533 render `<UnitRateDisplay>` which calls `useUnitPrice → useProductUnits`. Same gate: until the per-product UOM rows arrive, `activeUnits.length === 0` ⇒ shows the "No unit set" / loading state.
-- `useProductUnits` already supports a synchronous seed via `getCachedProductUnits` (populated by `prefetchAllProductUnits`), but on first selection of an un-prefetched product the gate is still hit.
-
-Meanwhile the search row already carries everything needed for an instant render:
-
-- `rate` (₹ per price-basis unit)
-- `default_uom_code`
-- `allowed_uom_codes`
-
-`ProductPickerPopover` already attaches them as `_default_uom_code` / `_allowed_uom_codes` on the hydrated product, and `UnitSelect` already uses these as `hintAllowedCodes` / `hintDefaultCode` to render the unit dropdown synchronously. Only the **price** path still blocks.
-
 ## Goal
+Add a "Product Availability" intent to the WhatsApp webhook so customers can ask things like *"Do you have Crocin?"*, *"Is Paracetamol available?"*, *"Need Dolo"* and get an instant, database-backed answer — without breaking the existing Place Order flow.
 
-When a product is selected:
+## Where the change goes
+Single file: `supabase/functions/webhook-whatsapp/index.ts`
 
-1. Price renders in the same render frame as selection — using `product.rate` at `default_uom_code`.
-2. Unit dropdown renders synchronously from the hint codes (already works).
-3. The full UOM mapping fetch fires in parallel and, once it arrives, refines the price for non-default units (or seamlessly replaces the hint-driven value with the mapping-driven value, identical for the default unit since `target.conversionToBase / basis.conversionToBase = 1`).
-4. Selecting the same product a second time triggers no refetch.
+Inside `processMessageAsync` (around lines 1116–1158), the intents are evaluated in order:
+1. `CONFIRMING_ORDER` state
+2. Order Status Query
+3. Retailer Info Query
+4. Delivery Query
+5. Follow-Up Query
+6. **Place Order intent** (keyword match: "place order", "i want to order", "new order", "order karna", …)
+7. Gemini fallback
 
-## Changes
+We will insert the **Product Availability** check as step 6.5 — **after** the explicit Place Order keyword check (so "place order" still wins) and **before** the Gemini fallback. This matches the requested priority: order placement → product availability → other → fallback.
 
-### 1. `src/hooks/useUnitPrice.ts` — add synchronous fallback
+## Implementation outline
 
-Extend the hook signature with optional hints:
-
-```ts
-useUnitPrice(productId, baseRate, {
-  hintDefaultCode?: string,
-  hintAllowedCodes?: string[],
-})
-```
-
-Behavior:
-
-- When `activeUnits` is empty (mapping still loading) **and** hints are present: return a synthetic `activeUnits = [{ code, conversionToBase: 1, isBase, isPriceBasis, isDefaultSales }]` so `priceForCode(default) === baseRate`.
-- `defaultUnitCode` falls back to `hintDefaultCode`.
-- `priceForCode(code)`: if `code` matches a hint code, return `baseRate`; otherwise return `baseRate` (cannot convert without mapping — same as today).
-- Once `useProductUnits` resolves, the real mapping takes over automatically.
-
-This removes the "blank price" state without touching the conversion math used in `addToCart`.
-
-### 2. `src/components/order-entry/UnitControls.tsx` — `UnitRateDisplay`
-
-- Accept the same optional `hintDefaultCode` / `hintAllowedCodes` props (mirrors `UnitSelect`).
-- Pass them to `useUnitPrice`.
-- Remove the early-return `<span>No unit set</span>` when `activeUnits.length === 0` **if** hints are present — fall through to render `₹{baseRate.toFixed(2)}`.
-- Keep the misconfigured-product error only after mapping has loaded *and* it is genuinely empty *and* no hints exist.
-
-### 3. `src/pages/OrderEntry.tsx` (Grid mode)
-
-At lines 2460 & 2533, pass the new hint props to `<UnitRateDisplay>` and `<UnitSelect>`:
-
-```tsx
-hintDefaultCode={(product as any)?._default_uom_code ?? undefined}
-hintAllowedCodes={(product as any)?._allowed_uom_codes ?? undefined}
-```
-
-(`UnitSelect` for variants gets the same hints — variants share the parent product's UOM mapping.)
-
-### 4. `src/components/TableOrderForm.tsx` (Table mode)
-
-Replace the `getPricePerUnit` gate at line 1143 with a hint-aware path:
+### 1. New helper: `handleProductAvailabilityQuery`
+Add a new async function alongside the other handlers:
 
 ```ts
-const hintDefault = (row.product as any)?._default_uom_code;
-const hintAllowed = (row.product as any)?._allowed_uom_codes as string[] | undefined;
-const mappingPrice = getPricePerUnit(row.product, row.variant, row.unit);
-
-// Show instantly: mapping price if known, else baseRate when row.unit
-// matches the hint default, else baseRate as the safe initial display.
-const baseRate = Number(row.variant ? row.variant.price : row.product.rate) || 0;
-const displayPrice =
-  mappingPrice ??
-  (row.unit && (row.unit === hintDefault || hintAllowed?.includes(row.unit))
-    ? baseRate
-    : baseRate);
+async function handleProductAvailabilityQuery(
+  supabase: any,
+  message: string,
+): Promise<string | null>
 ```
 
-Render `₹{displayPrice.toFixed(2)} per {row.unit || hintDefault}` immediately. Keep the existing `unconfigured` error branch for products whose mapping has loaded as empty.
+Steps inside:
 
-The `addToCart` path at line 311 (`syncRowsToCart`) is untouched — it still requires the real mapping, so cart math, scheme calculations and conversion factors continue to use `loadProductUnits`. Only the **display** is unblocked.
+**a. Intent detection (case-insensitive regex)**
+Return `null` (skip) unless one of these matches:
+- `/\bavailable\b/i`
+- `/\bdo you have\b/i`
+- `/\bis\s+.+\s+available\b/i`
+- `/\bneed\b/i`
+- `/\bhave\s+.+\s+product\b/i`
+- `/\bproduct available\b/i`
 
-### 5. Session detail cache (already mostly in place)
+To avoid clashing with order phrases, also bail out if the message already matched the Place Order keywords (we are after that block, so this is automatic).
 
-- `useProductUnits` is React-Query–backed with `staleTime: 5 min` and `gcTime: 30 min`, plus an in-memory seed via `getCachedProductUnits`. Selecting the same product again uses the cache — no RPC.
-- Add an explicit guard in `OrderEntry.tsx` around `loadProductUnits(product.id)` in `addToCart` (line 1306): check `getCachedProductUnits(product.id)` first to avoid the redundant promise round-trip on repeat selections.
-- No new `get_product_details` cache is needed for this fix; the search row already supplies everything required for instant render.
+**b. Extract the probable product term**
+- Lowercase the message, strip punctuation (`?`, `!`, `.`, `,`).
+- Remove a stopword set: `whether, product, available, do, you, have, need, is, are, please, the, a, an, any, some, kindly, sir, madam, bhai, ji, hai, kya, mujhe, chahiye, mil, sakta, sakti, currently, right, now, in, stock`.
+- Trim leftover whitespace. The remaining token(s) become the search term.
+- If the term is empty or shorter than 2 chars → return a polite "couldn't understand which product" message (or `null` to fall through to Gemini — we'll go with the polite message to keep behaviour deterministic).
 
-## What is NOT changing
+**c. Database search**
+Query the `products` table with case-insensitive partial match on `name` (and `sku` when present):
 
-- `useProductSearch.ts`, `search_products_for_order` RPC, offline fallback path
-- Cart math, scheme calculations, UOM conversion factors (`addToCart` still loads the real mapping before committing a row)
-- `useOfflineOrderEntry`, `sync_queue`, offline order flow
-- Customer Portal, any other page
+```ts
+supabase.from('products')
+  .select('name, sku, is_active')
+  .eq('is_active', true)
+  .or(`name.ilike.%${term}%,sku.ilike.%${term}%`)
+  .order('name')
+  .limit(10);
+```
 
-## Validation
+(Safely escape `%`, `_`, and commas in `term` before injecting into the `.or()` string.)
 
-- Pick a never-before-selected product on a throttled "Slow 4G" profile: rate appears in the same render frame as the product name; the `product_uom_mapping` request is still in flight in DevTools Network panel.
-- Switch unit to a non-default UOM before mapping resolves: shows `baseRate` immediately, then refines once mapping arrives.
-- Select the same product again in another row: zero new RPC calls (React-Query cache hit).
-- Adding to cart still respects the strict UOM-mapping guard (toast on misconfigured products).
-- No TypeScript errors; all hint props are optional with safe defaults.
+**d. Response logic**
+- **0 matches** →
+  `"I'm sorry, we could not find a matching product at the moment. Please try searching with another product name or contact our team for assistance."`
+- **1 match** →
+  `"Yes, the requested product is available.\n\nAvailable product:\n<Product Name>"`
+- **>1 matches** →
+  `"Yes, we have the following matching products available:\n\n<Name1>, <Name2>, <Name3>"`
+  (comma-separated, capped at 10 names to keep the WhatsApp message short).
+
+### 2. Wire it into `processMessageAsync`
+Right after the Place Order intent block (after line 1158) and before the Gemini fallback (line 1160), add:
+
+```ts
+const availabilityReply = await handleProductAvailabilityQuery(supabase, message);
+if (availabilityReply) {
+  session.conversation_history.push(
+    { role: 'user',  parts: [{ text: message }] },
+    { role: 'model', parts: [{ text: availabilityReply }] },
+  );
+  await saveSession(supabase, session);
+  await sendTwilioFreeForm(phone, availabilityReply);
+  return;
+}
+```
+
+This mirrors the existing handler pattern (status / delivery / follow-up), so:
+- It works as a conversational follow-up — session state is preserved, no reset.
+- It does **not** disturb `CONFIRMING_ORDER` (that block returns earlier).
+- It does **not** intercept "place order" phrases (those return earlier).
+
+## Constraints respected
+- **Place Order flow untouched** — checked first; availability handler returns early before Gemini runs.
+- **Products DB is source of truth** — direct `products` table query with `is_active = true`.
+- **Partial + case-insensitive** — `ilike '%term%'` on both `name` and `sku`.
+- **Multiple matches** — joined with `", "`, capped at 10.
+- **Conversational follow-up** — handler is stateless re. session.state; works in `IDLE` and `AWAITING_ORDER_DETAILS` alike, and history is appended.
+
+## Out of scope
+- No DB migration.
+- No changes to Gemini tools or system prompt.
+- No changes to `customer-portal-chat` (separate flow).
+- No deletion / refactor of existing handlers.
+
+## Testing plan (after implementation)
+Use `supabase--curl_edge_functions` to POST a Twilio-style form payload to `/webhook-whatsapp` for the listed example messages and confirm:
+- "Do you have Crocin?" → returns one of the 3 response shapes.
+- "Place order" still triggers the order template (unchanged).
+- "Need 2 kg adrak" while in `AWAITING_ORDER_DETAILS` still routes to Gemini order parsing (since "need" matches availability but products like "adrak" exist — note: this is a known overlap; mitigated because availability is checked **only after** the explicit place-order intent, and during `AWAITING_ORDER_DETAILS` users normally reply with quantities, not "need X"). If overlap proves problematic in QA, we can additionally skip the availability handler when `session.state === 'AWAITING_ORDER_DETAILS'` — flagging this for your call.
+
+## Open question
+During `AWAITING_ORDER_DETAILS`, should "Need Crocin" be treated as (a) an availability question or (b) an order line item? Default in this plan: **(a) availability** because the user phrased it as an enquiry. Let me know if you'd prefer (b).
