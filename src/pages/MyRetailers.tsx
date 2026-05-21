@@ -909,10 +909,10 @@ export const MyRetailers = () => {
                         <span className="text-muted-foreground">Beat:</span>
                         <span>{r.beat_name || r.beat_id}</span>
                       </div>
-                      {selectedUserIds.length > 1 && r.owner_name && (
+                      {selectedUserIds.length > 1 && (userNameMap[r.user_id] || r.owner_name) && (
                         <div className="flex items-center gap-2">
                           <span className="text-muted-foreground">Owner:</span>
-                          <span className="font-medium">{r.owner_name}</span>
+                          <span className="font-medium">{userNameMap[r.user_id] || r.owner_name}</span>
                         </div>
                       )}
                       {r.category && (
