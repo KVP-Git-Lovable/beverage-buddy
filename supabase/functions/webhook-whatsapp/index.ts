@@ -1229,6 +1229,17 @@ async function processMessageAsync(phone: string, message: string): Promise<void
         await sendTwilioFreeForm(phone, aiReply); return;
       }
 
+      // ── Handle Product Availability Query (after Place Order, before Gemini) ──
+      const availabilityReply = await handleProductAvailabilityQuery(supabase, message);
+      if (availabilityReply) {
+        session.conversation_history.push(
+          { role: 'user', parts: [{ text: message }] },
+          { role: 'model', parts: [{ text: availabilityReply }] }
+        );
+        await saveSession(supabase, session);
+        await sendTwilioFreeForm(phone, availabilityReply); return;
+      }
+
       // ── Standard Gemini Chat (IDLE or AWAITING_ORDER_DETAILS) ──
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       const systemPrompt = buildSystemPrompt(today, session);
