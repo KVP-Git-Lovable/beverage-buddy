@@ -23,7 +23,7 @@ export const CustomerPortalHeader: React.FC<CustomerPortalHeaderProps> = ({
   onLanguageChange,
 }) => {
   const navigate = useNavigate();
-  const firstName = retailerName?.split(' ')[0] || '';
+  const displayName = retailerName || '';
   const { unreadCount } = useCustomerNotifications(retailerId);
 
   return (
@@ -31,7 +31,7 @@ export const CustomerPortalHeader: React.FC<CustomerPortalHeaderProps> = ({
       <div className="flex items-center justify-between px-5 py-4 max-w-lg mx-auto">
         <div>
           <h1 className="text-lg font-bold text-white">
-            Hello, {firstName} 👋
+            Hello, {displayName} 👋
           </h1>
           <p className="text-[11px] text-white/70">What would you like to do today?</p>
         </div>
