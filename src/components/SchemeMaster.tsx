@@ -702,7 +702,15 @@ export const SchemeMaster = () => {
                 Manage promotional schemes, discounts, and special offers
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" onClick={downloadSchemeImportTemplate}>
+                <Download className="h-4 w-4 mr-2" />
+                Template
+              </Button>
+              <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Import
+              </Button>
               <Dialog open={isSchemeDialogOpen} onOpenChange={(open) => {
                 setIsSchemeDialogOpen(open);
                 if (!open) {
