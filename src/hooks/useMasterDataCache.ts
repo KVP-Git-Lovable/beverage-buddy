@@ -68,11 +68,25 @@ export function useMasterDataCache() {
       onProgress?.('schemes', 'loading');
       console.log('[Cache] Syncing schemes...');
 
-      // Cache only active schemes
-      const { data: schemes } = await supabase
-        .from('product_schemes')
-        .select('*')
-        .eq('is_active', true);
+      // Cache only active schemes (paginated to bypass 1000-row default limit)
+      const schemes: any[] = [];
+      {
+        const pageSize = 1000;
+        let from = 0;
+        while (true) {
+          const { data, error: schErr } = await supabase
+            .from('product_schemes')
+            .select('*')
+            .eq('is_active', true)
+            .range(from, from + pageSize - 1);
+          if (schErr) throw schErr;
+          if (!data?.length) break;
+          schemes.push(...data);
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
+      }
+
 
       // Cache categories
       const { data: categories } = await supabase
