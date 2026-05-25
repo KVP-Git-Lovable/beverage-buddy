@@ -146,6 +146,7 @@ export const SchemeMaster = () => {
 
   // Main tab state
   const [mainTab, setMainTab] = useState('manual');
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   // AI Suggestions
   const {
