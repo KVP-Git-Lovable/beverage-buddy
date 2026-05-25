@@ -51,13 +51,26 @@ export const useOfflineSchemes = () => {
   const syncSchemesFromSupabase = useCallback(async () => {
     try {
       console.log('[useOfflineSchemes] Syncing schemes from Supabase...');
-      const { data: schemesData, error } = await supabase
-        .from('product_schemes')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+      // Paginated fetch to bypass the 1000-row default limit
+      const schemesData: any[] = [];
+      {
+        const pageSize = 1000;
+        let from = 0;
+        while (true) {
+          const { data, error } = await supabase
+            .from('product_schemes')
+            .select('*')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .range(from, from + pageSize - 1);
+          if (error) throw error;
+          if (!data?.length) break;
+          schemesData.push(...data);
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
+      }
 
-      if (error) throw error;
 
       if (!schemesData || schemesData.length === 0) {
         // Clear cache if no active schemes

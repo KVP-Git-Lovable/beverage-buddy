@@ -147,12 +147,24 @@ const CustomerCart = () => {
   const { data: schemes = [] } = useQuery({
     queryKey: ['cart-schemes'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('product_schemes')
-        .select('id, name, scheme_type, product_id, category_id, condition_quantity, buy_quantity, buy_quantity_unit, discount_percentage, discount_amount, free_quantity, is_active, start_date, end_date')
-        .eq('is_active', true)
-        .eq('show_in_portal', true);
-      if (error) return [];
+      const all: any[] = [];
+      const pageSize = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from('product_schemes')
+          .select('id, name, scheme_type, product_id, category_id, condition_quantity, buy_quantity, buy_quantity_unit, discount_percentage, discount_amount, free_quantity, is_active, start_date, end_date')
+          .eq('is_active', true)
+          .eq('show_in_portal', true)
+          .range(from, from + pageSize - 1);
+        if (error) return [];
+        if (!data?.length) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      const data = all;
+
       const now = new Date();
       return (data || []).filter((s: any) => {
         if (s.start_date && now < new Date(s.start_date)) return false;
