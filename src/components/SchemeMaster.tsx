@@ -13,8 +13,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Plus, Edit2, Trash2, Gift, Search, Loader2, AlertTriangle, TrendingUp, Calendar, Globe, MapPin, Settings, Bot, Sparkles, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Gift, Search, Loader2, AlertTriangle, TrendingUp, Calendar, Globe, MapPin, Settings, Bot, Sparkles, RefreshCw, Upload, Download } from 'lucide-react';
 import { SchemeFormFields } from './SchemeFormFields';
+import { BulkImportSchemesModal } from './BulkImportSchemesModal';
+import { downloadSchemeImportTemplate } from '@/utils/schemeTemplateGenerator';
 import { SchemeDetailsDisplay } from './SchemeDetailsDisplay';
 import { SchemeApplicabilitySelector, ApplicabilityRule } from './SchemeApplicabilitySelector';
 import { SchemePolicyConfig } from './SchemePolicyConfig';
@@ -144,6 +146,7 @@ export const SchemeMaster = () => {
 
   // Main tab state
   const [mainTab, setMainTab] = useState('manual');
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   // AI Suggestions
   const {
@@ -699,7 +702,15 @@ export const SchemeMaster = () => {
                 Manage promotional schemes, discounts, and special offers
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" onClick={downloadSchemeImportTemplate}>
+                <Download className="h-4 w-4 mr-2" />
+                Template
+              </Button>
+              <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Import
+              </Button>
               <Dialog open={isSchemeDialogOpen} onOpenChange={(open) => {
                 setIsSchemeDialogOpen(open);
                 if (!open) {
@@ -1144,6 +1155,12 @@ export const SchemeMaster = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BulkImportSchemesModal
+        open={isBulkImportOpen}
+        onOpenChange={setIsBulkImportOpen}
+        onSuccess={fetchSchemes}
+      />
     </div>
   );
 };
