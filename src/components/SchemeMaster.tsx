@@ -1155,6 +1155,12 @@ export const SchemeMaster = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BulkImportSchemesModal
+        open={isBulkImportOpen}
+        onOpenChange={setIsBulkImportOpen}
+        onSuccess={fetchSchemes}
+      />
     </div>
   );
 };
