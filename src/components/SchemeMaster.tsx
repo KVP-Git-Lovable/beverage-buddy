@@ -182,18 +182,29 @@ export const SchemeMaster = () => {
   };
 
   const fetchSchemes = async () => {
-    const { data, error } = await supabase
-      .from('product_schemes')
-      .select(`
-        *,
-        product:products!product_schemes_product_id_fkey(*),
-        category:product_categories(*),
-        free_product:products!product_schemes_free_product_id_fkey(*)
-      `)
-      .order('name');
-    
-    if (error) throw error;
-    setSchemes((data as any) || []);
+    // Paginate to bypass Supabase's default 1000-row cap
+    const pageSize = 1000;
+    let from = 0;
+    const all: any[] = [];
+    while (true) {
+      const { data, error } = await supabase
+        .from('product_schemes')
+        .select(`
+          *,
+          product:products!product_schemes_product_id_fkey(*),
+          category:product_categories(*),
+          free_product:products!product_schemes_free_product_id_fkey(*)
+        `)
+        .order('name')
+        .range(from, from + pageSize - 1);
+
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      all.push(...data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    setSchemes(all as any);
   };
 
   const fetchProducts = async () => {
