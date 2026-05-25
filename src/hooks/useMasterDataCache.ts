@@ -413,7 +413,23 @@ export function useMasterDataCache() {
 
       // Schemes
       onProgress('schemes', 'loading');
-      const { data: schemes } = await supabase.from('product_schemes').select('*').eq('is_active', true);
+      const schemes: any[] = [];
+      {
+        const pageSize = 1000;
+        let from = 0;
+        while (true) {
+          const { data } = await supabase
+            .from('product_schemes')
+            .select('*')
+            .eq('is_active', true)
+            .range(from, from + pageSize - 1);
+          if (!data?.length) break;
+          schemes.push(...data);
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
+      }
+
       const { data: categories } = await supabase.from('product_categories').select('*');
       if (schemes) {
         await offlineStorage.clear(STORES.SCHEMES);
