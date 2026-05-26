@@ -926,10 +926,29 @@ const Operations = () => {
       return;
     }
 
+    const formatItem = (it: any): string => {
+      if (it == null) return '';
+      const name = it.product_name || it.name || it.productName || '';
+      const qty = it.quantity ?? it.qty ?? '';
+      const unit = it.unit || it.displayUnit || '';
+      const rate = it.rate ?? it.price ?? it.actualRate;
+      const qtyStr = unit ? `${qty} ${unit}` : `${qty}`;
+      const rateStr = rate != null && rate !== '' ? ` @ ₹${rate}` : '';
+      return `${name} (${qtyStr}${rateStr})`.trim();
+    };
+    const formatCell = (val: any): string => {
+      if (val == null) return '';
+      if (Array.isArray(val)) {
+        return val.map(v => (v && typeof v === 'object' ? formatItem(v) : String(v))).join(' | ');
+      }
+      if (typeof val === 'object') return formatItem(val);
+      return String(val);
+    };
+    const escape = (s: string) => `"${s.replace(/"/g, '""')}"`;
     const headers = Object.keys(data[0]).join(',');
     const csvContent = [
       headers,
-      ...data.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+      ...data.map(row => Object.values(row).map(val => escape(formatCell(val))).join(','))
     ].join('\n');
 
     await downloadCSV(csvContent, `${filename}-${format(new Date(), 'yyyy-MM-dd')}`);
