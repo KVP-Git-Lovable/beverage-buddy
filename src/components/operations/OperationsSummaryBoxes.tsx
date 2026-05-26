@@ -93,7 +93,7 @@ export const OperationsSummaryBoxes: React.FC<OperationsSummaryBoxesProps> = ({
           created_at,
           order_items(quantity, unit)
         `)
-        .eq('status', 'confirmed')
+        .neq('status', 'cancelled')
         .gte('created_at', from.toISOString())
         .lte('created_at', to.toISOString());
 
@@ -190,7 +190,7 @@ export const OperationsSummaryBoxes: React.FC<OperationsSummaryBoxesProps> = ({
             total_amount,
             order_items(quantity, unit)
           `)
-          .eq('status', 'confirmed')
+          .neq('status', 'cancelled')
           .gte('created_at', from.toISOString())
           .lte('created_at', to.toISOString());
 

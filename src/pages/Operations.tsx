@@ -475,7 +475,7 @@ const Operations = () => {
           retailer_name,
           order_items(product_name, quantity, rate, total)
         `)
-        .eq('status', 'confirmed')
+        .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
 
       if (userFilter !== 'all') {
