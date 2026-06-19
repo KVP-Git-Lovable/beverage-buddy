@@ -1,78 +1,62 @@
-## Goal
-When the user clicks "Summarize Report" on `/analytics`, generate the existing text summary, then generate a talking D-ID avatar video from that summary and play it above the summary.
+## Root cause
+- The current `did-narrate` edge function blocks until D-ID finishes (up to ~90s of internal polling). Edge function invocations end well before that, returning `504 D-ID generation timed out`.
+- Secondary bug: `Authorization` header is being base64-encoded (`btoa(apiKey)`). Per D-ID docs the header must be `Basic API_USER:API_PASSWORD` — the **raw** string, not base64.
 
-## Scope
-- Only `/analytics` (`src/pages/Analytics.tsx` and its summary component). No other analytics pages touched.
-- No changes to existing summary logic — only an additive narrator section above it.
+## Fix: async job pattern
 
-## Secrets (backend, not VITE_)
-Request via `add_secret`:
-- `DID_API_KEY` — D-ID Basic auth key
-- `DID_PRESENTER_ID` — the configured D-ID presenter/avatar ID
+### Edge function — split into start + status (single function, action-based)
+File: `supabase/functions/did-narrate/index.ts` (rewrite)
 
-The original spec used `VITE_DID_*`, but those would expose the key in the browser bundle. Per user confirmation, we use backend secrets + edge function instead.
+Request shapes (JSON body):
+- `{ action: "start", script: string }` → calls `POST https://api.d-id.com/talks`, returns `{ jobId }` immediately with status 202. No polling inside the function.
+- `{ action: "status", jobId: string }` → calls `GET /talks/{jobId}`, returns one of:
+  - `{ status: "pending" }` (D-ID statuses `created` / `started` / `processing`)
+  - `{ status: "ready", videoUrl }` (D-ID `done`)
+  - `{ status: "error", error }` (D-ID `error` / `rejected`)
 
-## Backend — new edge function `did-narrate`
-Path: `supabase/functions/did-narrate/index.ts`
+Other rules:
+- Keep JWT validation (`getClaims`) and CORS headers on every response.
+- Build Auth header as `Basic ${DID_API_KEY}` with **no** `btoa()`.
+- Validate inputs with Zod-style guards; cap script at 3000 chars.
+- Log D-ID error bodies server-side; never leak the API key.
 
-Responsibilities:
-1. Validate JWT (`getClaims`) — auth-only.
-2. Accept `{ script: string }` (Zod-validated, length-capped ~3000 chars).
-3. POST to `https://api.d-id.com/talks` with:
-   - `script: { type: 'text', input: script, provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' } }`
-   - `presenter_id: DID_PRESENTER_ID`
-   - Auth header `Basic <DID_API_KEY>`
-4. Poll `GET /talks/{id}` every 2s, up to ~60s, until `status === 'done'`.
-5. Return `{ videoUrl }` on success; `{ error }` with 4xx/5xx on failure.
-6. Standard CORS headers on all responses.
+### Client service
+File: `src/services/didService.ts`
+- Replace `generateDIDVideo` with two functions:
+  - `startDIDTalk(script: string): Promise<{ jobId: string }>`
+  - `getDIDStatus(jobId: string): Promise<{ status: 'pending' | 'ready' | 'error'; videoUrl?: string; error?: string }>`
+- Both call `supabase.functions.invoke('did-narrate', { body: { action, ... } })`.
 
-Registered automatically (no manual `config.toml` edit needed; `verify_jwt = false` default + in-code JWT check).
+### Hook (polling loop on the client)
+File: `src/hooks/useDIDNarration.ts`
+- Keep public API (`videoUrl`, `status`, `error`, `generate`, `regenerate`, `reset`) so the component doesn't change.
+- Internally:
+  1. `startDIDTalk(script)` → get `jobId`.
+  2. Poll `getDIDStatus(jobId)` every 3s up to ~3 min (configurable; 60 attempts).
+  3. On `ready` → set `videoUrl`, status `ready`, cache by script hash.
+  4. On `error` or timeout → status `error` with a friendly message.
+- Cancel any in-flight poll loop when:
+  - `regenerate` is called (start a new job).
+  - Hook unmounts (`useEffect` cleanup with a ref-based `cancelled` flag).
+- Keep session cache (`Map<scriptHash, videoUrl>`) so re-opening the dialog with the same summary skips D-ID.
 
-## Frontend
-### New: `src/services/didService.ts`
-- `generateDIDVideo(summaryText: string): Promise<{ videoUrl: string }>`
-- Wraps `supabase.functions.invoke('did-narrate', { body: { script } })`.
+### Component
+File: `src/components/analytics/AIReportNarrator.tsx`
+- No structural change. Update the status text under the video to reflect long-running progress: while `status === 'loading'`, show "Generating narration… this can take 1–2 minutes." Everything else (autoplay, Regenerate, Retry) stays the same.
 
-### New: `src/hooks/useDIDNarration.ts`
-- State: `{ videoUrl, status: 'idle'|'loading'|'ready'|'error', error }`.
-- `generate(summaryText)` — dedupes by hashing the script; if same script already generated this session, returns cached URL.
-- `regenerate(summaryText)` — bypasses cache.
-- In-memory `Map<scriptHash, videoUrl>` for session cache.
+## What does NOT change
+- `ReportSummaryDialog.tsx` wiring (already passes `generateSpokenSummary()`).
+- Existing text summary, voice chat, PDF download, and all other analytics behavior.
+- Secrets (`DID_API_KEY`, `DID_PRESENTER_ID`) — already configured.
 
-### New: `src/components/analytics/AIReportNarrator.tsx`
-- Props: `{ summaryText: string | null }`.
-- When `summaryText` becomes non-empty, auto-calls `generate`.
-- UI states:
-  - Loading: spinner + "Generating AI narration…"
-  - Ready: `<video src={videoUrl} autoPlay controls />` + "Regenerate Narration" button.
-  - Error: message "Unable to generate AI narration at this time. Please try again." + Retry button.
-- Title row: 🎥 AI Report Narrator.
-
-### Edit: `src/pages/Analytics.tsx` (and/or the existing summary subcomponent that renders the "Report Summary")
-- Locate the existing "Summarize Report" handler and the state holding the generated summary text.
-- Render `<AIReportNarrator summaryText={summary} />` directly above the existing Report Summary block.
-- No change to existing summary generation.
-
-## Flow
-1. User clicks existing "Summarize Report".
-2. Existing logic produces summary text (unchanged).
-3. `AIReportNarrator` receives `summaryText`, calls `useDIDNarration.generate`.
-4. Edge function creates talk + polls D-ID; returns `videoUrl`.
-5. Video renders above the summary and autoplays. Session cache prevents duplicate D-ID calls for the same text.
-
-## Error handling
-- Edge function returns structured `{ error }`; hook maps to `status='error'`.
-- Polling timeout (~60s) → error with retry.
-- D-ID 401/402 → surfaced as generic retryable error in UI; details logged server-side.
-
-## Out of scope
-- No changes to other analytics pages, other Summarize buttons, or summary text content.
-- No persistence of generated videos (session cache only, per spec).
+## Verification
+1. Open `/analytics` → click **Summarize Report**.
+2. Narrator shows "Generating narration…" while client polls.
+3. After D-ID finishes (typically 30–90s), video autoplays above the Summary.
+4. Edge function logs show two short invocations (start + several status checks), no 504.
 
 ## Files
-- Add: `supabase/functions/did-narrate/index.ts`
-- Add: `src/services/didService.ts`
-- Add: `src/hooks/useDIDNarration.ts`
-- Add: `src/components/analytics/AIReportNarrator.tsx`
-- Edit: `src/pages/Analytics.tsx` (mount narrator above summary)
-- Secrets: `DID_API_KEY`, `DID_PRESENTER_ID` requested via add_secret after approval.
+- Rewrite: `supabase/functions/did-narrate/index.ts`
+- Edit: `src/services/didService.ts`
+- Edit: `src/hooks/useDIDNarration.ts`
+- Minor copy tweak: `src/components/analytics/AIReportNarrator.tsx`
