@@ -50,6 +50,22 @@ Deno.serve(async (req) => {
       if (!script) return json({ error: 'script is required' }, 400);
       if (script.length > 3000) return json({ error: 'script too long (max 3000 chars)' }, 400);
 
+      const isUrl = /^https?:\/\//i.test(presenterId);
+      const payload: Record<string, unknown> = {
+        script: {
+          type: 'text',
+          input: script,
+          provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' },
+        },
+        config: { stitch: true },
+      };
+      if (isUrl) {
+        payload.source_url = presenterId;
+      } else {
+        payload.presenter_id = presenterId;
+      }
+      console.log('D-ID create talk payload', JSON.stringify({ ...payload, script: { ...(payload.script as object), input: '[redacted]' } }));
+
       const createRes = await fetch(`${DID_BASE}/talks`, {
         method: 'POST',
         headers: {
@@ -57,15 +73,7 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({
-          presenter_id: presenterId,
-          script: {
-            type: 'text',
-            input: script,
-            provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' },
-          },
-          config: { stitch: true },
-        }),
+        body: JSON.stringify(payload),
       });
       if (!createRes.ok) {
         const errText = await createRes.text();
@@ -74,6 +82,7 @@ Deno.serve(async (req) => {
       }
       const created = await createRes.json() as { id?: string };
       if (!created.id) return json({ error: 'D-ID did not return a talk id' }, 502);
+      console.log('D-ID talk created', created.id);
       return json({ jobId: created.id }, 202);
     }
 
@@ -94,15 +103,16 @@ Deno.serve(async (req) => {
         result_url?: string;
         error?: unknown;
       };
+      console.log('D-ID poll', jobId, JSON.stringify(poll));
 
       if (poll.status === 'done' && poll.result_url) {
         return json({ status: 'ready', videoUrl: poll.result_url });
       }
       if (poll.status === 'error' || poll.status === 'rejected') {
         console.error('D-ID generation failed', poll);
-        return json({ status: 'error', error: 'D-ID generation failed' });
+        return json({ status: 'error', error: typeof poll.error === 'string' ? poll.error : JSON.stringify(poll.error) || 'D-ID generation failed' });
       }
-      return json({ status: 'pending' });
+      return json({ status: 'pending', didStatus: poll.status });
     }
 
     return json({ error: 'Unknown action' }, 400);

@@ -8,6 +8,34 @@ export interface DIDStatusResult {
   error?: string;
 }
 
+async function extractErrorMessage(error: unknown, fallback: string): Promise<string> {
+  // supabase.functions.invoke wraps non-2xx in FunctionsHttpError; the body
+  // is accessible via error.context (a Response). Try to pull D-ID's detail.
+  try {
+    const ctx = (error as { context?: Response })?.context;
+    if (ctx && typeof ctx.json === 'function') {
+      const body = await ctx.clone().json().catch(() => null) as
+        | { error?: string; detail?: string }
+        | null;
+      if (body) {
+        let msg = body.error || fallback;
+        if (body.detail) {
+          try {
+            const inner = JSON.parse(body.detail) as { description?: string };
+            if (inner?.description) msg = `${msg}: ${inner.description}`;
+          } catch {
+            msg = `${msg}: ${body.detail}`;
+          }
+        }
+        return msg;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return (error as { message?: string })?.message || fallback;
+}
+
 /**
  * Start an async D-ID talking-avatar job. Returns immediately with a jobId.
  */
@@ -18,7 +46,7 @@ export async function startDIDTalk(summaryText: string): Promise<{ jobId: string
   const { data, error } = await supabase.functions.invoke('did-narrate', {
     body: { action: 'start', script },
   });
-  if (error) throw new Error(error.message || 'Failed to start narration');
+  if (error) throw new Error(await extractErrorMessage(error, 'Failed to start narration'));
   const jobId = (data as { jobId?: string })?.jobId;
   if (!jobId) throw new Error((data as { error?: string })?.error || 'No jobId returned');
   return { jobId };
@@ -31,7 +59,7 @@ export async function getDIDStatus(jobId: string): Promise<DIDStatusResult> {
   const { data, error } = await supabase.functions.invoke('did-narrate', {
     body: { action: 'status', jobId },
   });
-  if (error) throw new Error(error.message || 'Failed to fetch narration status');
+  if (error) throw new Error(await extractErrorMessage(error, 'Failed to fetch narration status'));
   const d = (data ?? {}) as DIDStatusResult;
   if (d.status !== 'pending' && d.status !== 'ready' && d.status !== 'error') {
     throw new Error('Invalid status response');
