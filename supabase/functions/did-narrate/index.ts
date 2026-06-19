@@ -94,15 +94,16 @@ Deno.serve(async (req) => {
         result_url?: string;
         error?: unknown;
       };
+      console.log('D-ID poll', jobId, JSON.stringify(poll));
 
       if (poll.status === 'done' && poll.result_url) {
         return json({ status: 'ready', videoUrl: poll.result_url });
       }
       if (poll.status === 'error' || poll.status === 'rejected') {
         console.error('D-ID generation failed', poll);
-        return json({ status: 'error', error: 'D-ID generation failed' });
+        return json({ status: 'error', error: typeof poll.error === 'string' ? poll.error : JSON.stringify(poll.error) || 'D-ID generation failed' });
       }
-      return json({ status: 'pending' });
+      return json({ status: 'pending', didStatus: poll.status });
     }
 
     return json({ error: 'Unknown action' }, 400);
