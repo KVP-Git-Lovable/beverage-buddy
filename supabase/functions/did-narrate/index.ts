@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       if (!script) return json({ error: 'script is required' }, 400);
       if (script.length > 3000) return json({ error: 'script too long (max 3000 chars)' }, 400);
 
-      const createRes = await fetch(`${DID_BASE}/talks`, {
+      const createRes = await fetch(`${DID_BASE}/clips`, {
         method: 'POST',
         headers: {
           Authorization: didAuth,
@@ -64,16 +64,16 @@ Deno.serve(async (req) => {
             input: script,
             provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' },
           },
-          config: { stitch: true },
         }),
       });
       if (!createRes.ok) {
         const errText = await createRes.text();
-        console.error('D-ID create talk failed', createRes.status, errText);
-        return json({ error: 'Failed to create D-ID talk', detail: errText }, 502);
+        console.error('D-ID create clip failed', createRes.status, errText);
+        return json({ error: 'Failed to create D-ID clip', detail: errText }, 502);
       }
       const created = await createRes.json() as { id?: string };
-      if (!created.id) return json({ error: 'D-ID did not return a talk id' }, 502);
+      if (!created.id) return json({ error: 'D-ID did not return a clip id' }, 502);
+      console.log('D-ID clip created', created.id);
       return json({ jobId: created.id }, 202);
     }
 
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       const jobId = typeof body.jobId === 'string' ? body.jobId.trim() : '';
       if (!jobId) return json({ error: 'jobId is required' }, 400);
 
-      const pollRes = await fetch(`${DID_BASE}/talks/${jobId}`, {
+      const pollRes = await fetch(`${DID_BASE}/clips/${jobId}`, {
         headers: { Authorization: didAuth, Accept: 'application/json' },
       });
       if (!pollRes.ok) {
