@@ -1,21 +1,11 @@
-// D-ID talking avatar narration generator.
-// Accepts { script } and returns { videoUrl }.
+// D-ID talking avatar narration — async job pattern.
+// Actions:
+//   { action: "start", script }  -> { jobId }
+//   { action: "status", jobId }  -> { status: 'pending'|'ready'|'error', videoUrl?, error? }
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 const DID_BASE = 'https://api.d-id.com';
-
-interface CreateTalkResponse {
-  id: string;
-  status?: string;
-}
-
-interface GetTalkResponse {
-  id: string;
-  status: string;
-  result_url?: string;
-  error?: unknown;
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,7 +13,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ---- Auth (signing-keys system, in-code JWT check) ----
+    // ---- Auth ----
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return json({ error: 'Unauthorized' }, 401);
@@ -39,78 +29,83 @@ Deno.serve(async (req) => {
       return json({ error: 'Unauthorized' }, 401);
     }
 
-    // ---- Input validation ----
-    const body = await req.json().catch(() => null);
-    const script = typeof body?.script === 'string' ? body.script.trim() : '';
-    if (!script) return json({ error: 'script is required' }, 400);
-    if (script.length > 3000) return json({ error: 'script too long (max 3000 chars)' }, 400);
+    const body = await req.json().catch(() => null) as
+      | { action?: string; script?: string; jobId?: string }
+      | null;
+    if (!body || typeof body.action !== 'string') {
+      return json({ error: 'action is required' }, 400);
+    }
 
-    // ---- Secrets ----
     const apiKey = Deno.env.get('DID_API_KEY');
     const presenterId = Deno.env.get('DID_PRESENTER_ID');
     if (!apiKey || !presenterId) {
       console.error('Missing D-ID configuration');
       return json({ error: 'D-ID not configured' }, 500);
     }
+    // Per D-ID docs: send the raw "API_USER:API_PASSWORD" as Basic — no base64.
+    const didAuth = `Basic ${apiKey}`;
 
-    // D-ID accepts either a raw key or a base64 "user:pass" — pass through as Basic.
-    const authValue = apiKey.includes(':') ? btoa(apiKey) : apiKey;
-    const didAuth = `Basic ${authValue}`;
+    if (body.action === 'start') {
+      const script = typeof body.script === 'string' ? body.script.trim() : '';
+      if (!script) return json({ error: 'script is required' }, 400);
+      if (script.length > 3000) return json({ error: 'script too long (max 3000 chars)' }, 400);
 
-    // ---- Create talk ----
-    const createRes = await fetch(`${DID_BASE}/talks`, {
-      method: 'POST',
-      headers: {
-        Authorization: didAuth,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        presenter_id: presenterId,
-        script: {
-          type: 'text',
-          input: script,
-          provider: {
-            type: 'microsoft',
-            voice_id: 'en-US-JennyNeural',
-          },
+      const createRes = await fetch(`${DID_BASE}/talks`, {
+        method: 'POST',
+        headers: {
+          Authorization: didAuth,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
-        config: { stitch: true },
-      }),
-    });
-
-    if (!createRes.ok) {
-      const errText = await createRes.text();
-      console.error('D-ID create talk failed', createRes.status, errText);
-      return json({ error: 'Failed to create D-ID talk', detail: errText }, 502);
+        body: JSON.stringify({
+          presenter_id: presenterId,
+          script: {
+            type: 'text',
+            input: script,
+            provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' },
+          },
+          config: { stitch: true },
+        }),
+      });
+      if (!createRes.ok) {
+        const errText = await createRes.text();
+        console.error('D-ID create talk failed', createRes.status, errText);
+        return json({ error: 'Failed to create D-ID talk', detail: errText }, 502);
+      }
+      const created = await createRes.json() as { id?: string };
+      if (!created.id) return json({ error: 'D-ID did not return a talk id' }, 502);
+      return json({ jobId: created.id }, 202);
     }
-    const created = (await createRes.json()) as CreateTalkResponse;
-    const talkId = created.id;
-    if (!talkId) return json({ error: 'D-ID did not return a talk id' }, 502);
 
-    // ---- Poll until done (max ~90s) ----
-    const maxAttempts = 45;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      await sleep(2000);
-      const pollRes = await fetch(`${DID_BASE}/talks/${talkId}`, {
+    if (body.action === 'status') {
+      const jobId = typeof body.jobId === 'string' ? body.jobId.trim() : '';
+      if (!jobId) return json({ error: 'jobId is required' }, 400);
+
+      const pollRes = await fetch(`${DID_BASE}/talks/${jobId}`, {
         headers: { Authorization: didAuth, Accept: 'application/json' },
       });
       if (!pollRes.ok) {
         const errText = await pollRes.text();
         console.error('D-ID poll failed', pollRes.status, errText);
-        continue;
+        return json({ error: 'Failed to fetch D-ID status', detail: errText }, 502);
       }
-      const poll = (await pollRes.json()) as GetTalkResponse;
+      const poll = await pollRes.json() as {
+        status?: string;
+        result_url?: string;
+        error?: unknown;
+      };
+
       if (poll.status === 'done' && poll.result_url) {
-        return json({ videoUrl: poll.result_url, talkId });
+        return json({ status: 'ready', videoUrl: poll.result_url });
       }
       if (poll.status === 'error' || poll.status === 'rejected') {
         console.error('D-ID generation failed', poll);
-        return json({ error: 'D-ID generation failed', detail: poll.error ?? null }, 502);
+        return json({ status: 'error', error: 'D-ID generation failed' });
       }
+      return json({ status: 'pending' });
     }
 
-    return json({ error: 'D-ID generation timed out' }, 504);
+    return json({ error: 'Unknown action' }, 400);
   } catch (err) {
     console.error('did-narrate error', err);
     return json({ error: 'Internal error', detail: String(err) }, 500);
@@ -122,8 +117,4 @@ function json(payload: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
-}
-
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
 }
