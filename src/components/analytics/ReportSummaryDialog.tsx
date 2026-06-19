@@ -7,6 +7,7 @@ import { Copy, Volume2, VolumeX, Mic, MicOff, Send, Loader2, MessageCircle } fro
 import { toast } from "sonner";
 import { useReportVoiceChat } from "@/hooks/useReportVoiceChat";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AIReportNarrator } from "./AIReportNarrator";
 
 // Indian number formatting helpers
 const formatINR = (value: number): string => {
