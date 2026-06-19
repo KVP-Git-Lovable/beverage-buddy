@@ -1,86 +1,78 @@
-# Bulk Import Schemes
+## Goal
+When the user clicks "Summarize Report" on `/analytics`, generate the existing text summary, then generate a talking D-ID avatar video from that summary and play it above the summary.
 
-Add a **Bulk Import Schemes** flow to `/scheme-management` so admins can create promotional schemes for thousands of products via an Excel/CSV upload, with SKU-based matching against `public.products`.
+## Scope
+- Only `/analytics` (`src/pages/Analytics.tsx` and its summary component). No other analytics pages touched.
+- No changes to existing summary logic — only an additive narrator section above it.
 
-## UI changes
+## Secrets (backend, not VITE_)
+Request via `add_secret`:
+- `DID_API_KEY` — D-ID Basic auth key
+- `DID_PRESENTER_ID` — the configured D-ID presenter/avatar ID
 
-1. In `src/components/SchemeMaster.tsx`, add a **Bulk Import** button next to the existing "Add Scheme" button.
-2. Add a **Download Template** button that downloads a sample `.xlsx` with header row, one example row per supported scheme type, and an inline `Instructions` sheet.
-3. Clicking **Bulk Import** opens a new modal `BulkImportSchemesModal.tsx` (pattern based on existing `BulkImportRetailersModal.tsx`).
+The original spec used `VITE_DID_*`, but those would expose the key in the browser bundle. Per user confirmation, we use backend secrets + edge function instead.
 
-## Modal flow (4 steps)
+## Backend — new edge function `did-narrate`
+Path: `supabase/functions/did-narrate/index.ts`
 
-```text
-[1 Upload] -> [2 Preview & Validate] -> [3 Confirm] -> [4 Result]
-```
+Responsibilities:
+1. Validate JWT (`getClaims`) — auth-only.
+2. Accept `{ script: string }` (Zod-validated, length-capped ~3000 chars).
+3. POST to `https://api.d-id.com/talks` with:
+   - `script: { type: 'text', input: script, provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' } }`
+   - `presenter_id: DID_PRESENTER_ID`
+   - Auth header `Basic <DID_API_KEY>`
+4. Poll `GET /talks/{id}` every 2s, up to ~60s, until `status === 'done'`.
+5. Return `{ videoUrl }` on success; `{ error }` with 4xx/5xx on failure.
+6. Standard CORS headers on all responses.
 
-- **Step 1 – Upload**: drag/drop or pick `.xlsx` / `.csv`. Parse client-side with `xlsx` (already used in `import-retailer-ext-db`).
-- **Step 2 – Preview**: show a virtualized table of parsed rows with per-row status:
-  - `Ready` (SKU matched, all required fields valid)
-  - `Error` (SKU not found, invalid scheme_type, missing required field for that type, bad date, bad number, free_product_sku not found, etc.)
-  - Summary chips: Total / Ready / Errors / Duplicate SKUs in file.
-  - Allow download of an **Errors-only CSV** for the user to fix and re-upload.
-  - Toggle: *Skip rows with errors* (default on) vs *Abort if any error*.
-- **Step 3 – Confirm**: choose conflict policy for SKUs that already have an active scheme with the same `name`:
-  - `Skip duplicates` (default)
-  - `Update existing` (match by `name + product_id`)
-  - `Create anyway`
-- **Step 4 – Result**: counts of inserted / updated / skipped / failed, with downloadable result CSV.
+Registered automatically (no manual `config.toml` edit needed; `verify_jwt = false` default + in-code JWT check).
 
-## Template columns (single sheet)
+## Frontend
+### New: `src/services/didService.ts`
+- `generateDIDVideo(summaryText: string): Promise<{ videoUrl: string }>`
+- Wraps `supabase.functions.invoke('did-narrate', { body: { script } })`.
 
-Required for every row: `sku`, `scheme_name`, `scheme_type`, `start_date`, `end_date`, `is_active`.
+### New: `src/hooks/useDIDNarration.ts`
+- State: `{ videoUrl, status: 'idle'|'loading'|'ready'|'error', error }`.
+- `generate(summaryText)` — dedupes by hashing the script; if same script already generated this session, returns cached URL.
+- `regenerate(summaryText)` — bypasses cache.
+- In-memory `Map<scriptHash, videoUrl>` for session cache.
 
-Type-specific (only those relevant to the row's `scheme_type` are read):
+### New: `src/components/analytics/AIReportNarrator.tsx`
+- Props: `{ summaryText: string | null }`.
+- When `summaryText` becomes non-empty, auto-calls `generate`.
+- UI states:
+  - Loading: spinner + "Generating AI narration…"
+  - Ready: `<video src={videoUrl} autoPlay controls />` + "Regenerate Narration" button.
+  - Error: message "Unable to generate AI narration at this time. Please try again." + Retry button.
+- Title row: 🎥 AI Report Narrator.
 
-| Column | Used by |
-|---|---|
-| `discount_percentage` | percentage_discount, tiered_discount (ignored), time_based_offer, first_order_discount, category_wide_discount |
-| `discount_amount` | flat_discount |
-| `condition_quantity` | percentage_discount, flat_discount |
-| `quantity_condition_type` (`more_than` / `less_than` / `equal_to`) | percentage_discount, flat_discount |
-| `buy_quantity`, `free_quantity`, `buy_quantity_unit`, `free_quantity_unit`, `free_product_sku` (or literal `same`) | buy_x_get_y_free |
-| `bundle_product_skus` (semicolon-separated), `bundle_discount_percentage`, `bundle_discount_amount` | bundle_combo |
-| `tier_data_json` (JSON array `[{"min_qty":1,"max_qty":9,"discount_percentage":5}]`) | tiered_discount |
-| `category_name` | category_wide_discount |
-| `min_order_value` | category_wide_discount, others optional |
-| `is_first_order_only` | first_order_discount |
-| `priority`, `description`, `show_in_portal`, `applicability_type` | all (optional) |
+### Edit: `src/pages/Analytics.tsx` (and/or the existing summary subcomponent that renders the "Report Summary")
+- Locate the existing "Summarize Report" handler and the state holding the generated summary text.
+- Render `<AIReportNarrator summaryText={summary} />` directly above the existing Report Summary block.
+- No change to existing summary generation.
 
-## Validation rules
+## Flow
+1. User clicks existing "Summarize Report".
+2. Existing logic produces summary text (unchanged).
+3. `AIReportNarrator` receives `summaryText`, calls `useDIDNarration.generate`.
+4. Edge function creates talk + polls D-ID; returns `videoUrl`.
+5. Video renders above the summary and autoplays. Session cache prevents duplicate D-ID calls for the same text.
 
-- `sku` must resolve to exactly one row in `products` (case-insensitive trim).
-- `scheme_type` must be one of the 8 enums allowed by the existing `valid_scheme_type` CHECK constraint.
-- `start_date <= end_date`, both ISO `YYYY-MM-DD`.
-- Numbers parsed with `Number()`; reject `NaN`.
-- For `buy_x_get_y_free`: `free_product_sku` is either `same` (stored as the literal string `'same'` in `free_product_id` is NOT valid – the column is uuid). To stay consistent with existing logic that compares `free_product_id === 'same'`, we will instead store `free_product_id = product_id` (same product) when the user writes `same`, and the resolved uuid otherwise.
-- For `bundle_combo`: every SKU in `bundle_product_skus` must resolve; store the resolved uuids as `text[]` in `bundle_product_ids` (matching current column type).
-- For `category_wide_discount`: `category_name` must resolve to one `product_categories.id`.
-
-## Data fetching for matching
-
-Before validation, the modal fetches in parallel:
-- `products` rows for every distinct SKU in the upload (`.in('sku', [...])`, chunked at 500).
-- `product_categories` for every distinct `category_name`.
-
-Results are cached in `Map<string, uuid>` for O(1) per-row lookup.
-
-## Insert strategy
-
-- Build an array of `product_schemes` rows from validated entries.
-- Chunked insert (500 per batch) via `supabase.from('product_schemes').insert(chunk)` with progress bar.
-- On `Update existing` policy, run `select id from product_schemes where product_id = $1 and name = $2` first per row, then `upsert`.
-- On any chunk error, surface `error.message` per failed row and continue (do not abort the whole import).
-
-## Files to add / change
-
-- **New** `src/components/BulkImportSchemesModal.tsx` (~500 lines): upload, parse, validate, preview table, confirm, insert, result.
-- **New** `src/utils/schemeTemplateGenerator.ts`: builds the `.xlsx` template with header + example rows + Instructions sheet using `xlsx` (already a dep).
-- **New** `src/utils/schemeImportValidator.ts`: pure functions `validateRow`, `buildSchemeInsertPayload`, `resolveLookups` (unit-testable).
-- **Edit** `src/components/SchemeMaster.tsx`: add **Bulk Import** + **Download Template** buttons in the header, wire to the new modal, and call `loadSchemes()` after a successful import.
+## Error handling
+- Edge function returns structured `{ error }`; hook maps to `status='error'`.
+- Polling timeout (~60s) → error with retry.
+- D-ID 401/402 → surfaced as generic retryable error in UI; details logged server-side.
 
 ## Out of scope
+- No changes to other analytics pages, other Summarize buttons, or summary text content.
+- No persistence of generated videos (session cache only, per spec).
 
-- No database migrations – the existing `product_schemes` columns and RLS already support everything.
-- No changes to `schemeCalculator.ts` – imported rows reuse the existing calculation paths.
-- No background/edge-function processing; import runs client-side with chunked inserts (acceptable for a few thousand rows). If a user needs >10k rows we can later move to an edge function.
+## Files
+- Add: `supabase/functions/did-narrate/index.ts`
+- Add: `src/services/didService.ts`
+- Add: `src/hooks/useDIDNarration.ts`
+- Add: `src/components/analytics/AIReportNarrator.tsx`
+- Edit: `src/pages/Analytics.tsx` (mount narrator above summary)
+- Secrets: `DID_API_KEY`, `DID_PRESENTER_ID` requested via add_secret after approval.
