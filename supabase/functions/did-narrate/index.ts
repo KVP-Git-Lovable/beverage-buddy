@@ -50,6 +50,22 @@ Deno.serve(async (req) => {
       if (!script) return json({ error: 'script is required' }, 400);
       if (script.length > 3000) return json({ error: 'script too long (max 3000 chars)' }, 400);
 
+      const isUrl = /^https?:\/\//i.test(presenterId);
+      const payload: Record<string, unknown> = {
+        script: {
+          type: 'text',
+          input: script,
+          provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' },
+        },
+        config: { stitch: true },
+      };
+      if (isUrl) {
+        payload.source_url = presenterId;
+      } else {
+        payload.presenter_id = presenterId;
+      }
+      console.log('D-ID create talk payload', JSON.stringify({ ...payload, script: { ...(payload.script as object), input: '[redacted]' } }));
+
       const createRes = await fetch(`${DID_BASE}/talks`, {
         method: 'POST',
         headers: {
@@ -57,15 +73,7 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({
-          presenter_id: presenterId,
-          script: {
-            type: 'text',
-            input: script,
-            provider: { type: 'microsoft', voice_id: 'en-US-JennyNeural' },
-          },
-          config: { stitch: true },
-        }),
+        body: JSON.stringify(payload),
       });
       if (!createRes.ok) {
         const errText = await createRes.text();
