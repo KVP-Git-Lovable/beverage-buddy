@@ -60,9 +60,9 @@ export const AIReportNarrator = ({ summaryText }: AIReportNarratorProps) => {
 
       <div className="relative w-full overflow-hidden rounded-md bg-black/90 aspect-video flex items-center justify-center">
         {status === 'loading' && (
-          <div className="flex flex-col items-center gap-2 text-white/90">
+          <div className="flex flex-col items-center gap-2 text-white/90 px-4 text-center">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-xs">Generating AI narration…</span>
+            <span className="text-xs">Generating narration… this can take 1–2 minutes.</span>
           </div>
         )}
 
@@ -97,7 +97,7 @@ export const AIReportNarrator = ({ summaryText }: AIReportNarratorProps) => {
 
       {status === 'loading' && (
         <p className="text-[11px] text-muted-foreground">
-          Status: Generating narration…
+          Status: Generating narration… this can take 1–2 minutes.
         </p>
       )}
     </div>
