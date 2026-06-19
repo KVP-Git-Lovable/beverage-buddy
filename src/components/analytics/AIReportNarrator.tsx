@@ -13,11 +13,10 @@ interface AIReportNarratorProps {
  * Mounted above the textual Report Summary on /analytics.
  */
 export const AIReportNarrator = ({ summaryText }: AIReportNarratorProps) => {
-  const { videoUrl, status, error, generate, regenerate } = useDIDNarration();
+  const { videoUrl, status, error, elapsedSec, generate, regenerate, cancel } = useDIDNarration();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lastTriggeredRef = useRef<string | null>(null);
 
-  // Auto-generate whenever the summary text changes (and is non-empty).
   useEffect(() => {
     const text = (summaryText || '').trim();
     if (!text) return;
@@ -26,12 +25,9 @@ export const AIReportNarrator = ({ summaryText }: AIReportNarratorProps) => {
     void generate(text);
   }, [summaryText, generate]);
 
-  // Auto-play when a fresh video URL is ready.
   useEffect(() => {
     if (status === 'ready' && videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Browsers may block autoplay with sound; controls are visible for manual play.
-      });
+      videoRef.current.play().catch(() => {});
     }
   }, [status, videoUrl]);
 
@@ -42,6 +38,13 @@ export const AIReportNarrator = ({ summaryText }: AIReportNarratorProps) => {
   };
 
   if (!summaryText) return null;
+
+  const loadingMessage =
+    elapsedSec < 60
+      ? 'Generating narration… this can take 1–2 minutes.'
+      : elapsedSec < 150
+      ? `Still working… D-ID is processing (${elapsedSec}s elapsed).`
+      : `D-ID may be queuing this job on a trial plan (${elapsedSec}s elapsed). You can cancel and try again.`;
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3">
@@ -56,13 +59,18 @@ export const AIReportNarrator = ({ summaryText }: AIReportNarratorProps) => {
             Regenerate Narration
           </Button>
         )}
+        {status === 'loading' && (
+          <Button variant="outline" size="sm" onClick={cancel}>
+            Cancel
+          </Button>
+        )}
       </div>
 
       <div className="relative w-full overflow-hidden rounded-md bg-black/90 aspect-video flex items-center justify-center">
         {status === 'loading' && (
           <div className="flex flex-col items-center gap-2 text-white/90 px-4 text-center">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-xs">Generating narration… this can take 1–2 minutes.</span>
+            <span className="text-xs">{loadingMessage}</span>
           </div>
         )}
 
@@ -96,9 +104,7 @@ export const AIReportNarrator = ({ summaryText }: AIReportNarratorProps) => {
       </div>
 
       {status === 'loading' && (
-        <p className="text-[11px] text-muted-foreground">
-          Status: Generating narration… this can take 1–2 minutes.
-        </p>
+        <p className="text-[11px] text-muted-foreground">Status: {loadingMessage}</p>
       )}
     </div>
   );
