@@ -7,6 +7,7 @@ import { Copy, Volume2, VolumeX, Mic, MicOff, Send, Loader2, MessageCircle } fro
 import { toast } from "sonner";
 import { useReportVoiceChat } from "@/hooks/useReportVoiceChat";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AIReportNarrator } from "./AIReportNarrator";
 
 // Indian number formatting helpers
 const formatINR = (value: number): string => {
@@ -334,6 +335,11 @@ export const ReportSummaryDialog = ({
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto flex flex-col gap-4 min-h-0">
+          {/* AI Report Narrator (D-ID avatar video) */}
+          {open && (
+            <AIReportNarrator summaryText={generateSpokenSummary()} />
+          )}
+
           {/* Summary Section */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
